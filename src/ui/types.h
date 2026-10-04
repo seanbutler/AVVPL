@@ -14,6 +14,13 @@ struct Vec2 {
 
 struct Color4 { uint8_t r=0, g=0, b=0, a=255; };
 
+// Value carried along wires between sockets.
+// trig is a one-frame pulse; f is a continuous float.
+struct Value {
+    float f    = 0.f;
+    bool  trig = false;
+};
+
 namespace pal {
     inline constexpr Color4 NodeBg      {28,  28,  36,  235};
     inline constexpr Color4 NodeBorder  {55,  55,  72,  255};

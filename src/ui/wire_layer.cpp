@@ -73,6 +73,11 @@ SocketWidget* WireLayer::findSocketAt(Vec2 worldPt,
     return result;
 }
 
+void WireLayer::propagate() {
+    for (auto& w : wires)
+        w.to->value = w.from->value;
+}
+
 void WireLayer::drawWire(tvg::Scene& scene, Vec2 a, Vec2 b, Color4 c, float sw) {
     float dx = std::abs(b.x - a.x) * 0.5f + 30.f;
     auto sh = tvg::Shape::gen();

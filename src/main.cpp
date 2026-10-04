@@ -6,6 +6,7 @@
 #include "ui/slider.h"
 #include "ui/dial.h"
 #include "ui/histogram.h"
+#include "ui/timer_node.h"
 
 #include <cstdlib>
 #include <memory>
@@ -78,9 +79,31 @@ static void buildScene(NodeCanvas& nc)
     (void)inOut; (void)inOut2; (void)volSlider;
     nc.addNode(std::move(nE));
 
-    // ── Pre-wire some connections ─────────────────────────────────────────────
-    nc.wires().connect(outA,     inFilter);   // Osc → Filter audio
-    nc.wires().connect(outEnv,   inCutoff);   // Envelope → Filter cutoff
+    // ── Node F: Loop timer ────────────────────────────────────────────────────
+    auto loopOwned = std::make_unique<LoopTimerNode>(Vec2{80, 500});
+    auto* loop     = loopOwned.get();
+    loop->inInterval->value.f = 1.0f;
+    {
+        auto* s = loop->addWidget(std::make_unique<SliderWidget>("Interval", 0.1f, 4.f, 1.0f));
+        s->onChange = [loop](float v) { loop->inInterval->value.f = v; };
+    }
+    nc.addNode(std::move(loopOwned));
+
+    // ── Node G: One-shot timer ────────────────────────────────────────────────
+    auto timerOwned = std::make_unique<TimerNode>(Vec2{340, 500});
+    auto* timer     = timerOwned.get();
+    timer->inDuration->value.f = 3.f;
+    {
+        auto* s = timer->addWidget(std::make_unique<SliderWidget>("Duration", 0.5f, 8.f, 3.f));
+        s->onChange = [timer](float v) { timer->inDuration->value.f = v; };
+    }
+    // Loop's Tick resets the one-shot timer → it restarts every interval.
+    nc.wires().connect(loop->outTick, timer->inReset);
+    nc.addNode(std::move(timerOwned));
+
+    // ── Pre-wire signal connections ───────────────────────────────────────────
+    nc.wires().connect(outA,   inFilter);   // Osc → Filter audio
+    nc.wires().connect(outEnv, inCutoff);   // Envelope → Filter cutoff
     (void)pA;
 }
 
@@ -121,10 +144,16 @@ int main(int /*argc*/, char* /*argv*/[])
     NodeCanvas nc(W, H);
     buildScene(nc);
 
-    bool running = true;
+    bool     running  = true;
     SDL_Event ev;
+    Uint64   lastTick = SDL_GetTicksNS();
 
     while (running) {
+        Uint64 now = SDL_GetTicksNS();
+        float  dt  = (float)((now - lastTick) * 1e-9);
+        lastTick   = now;
+        dt = std::min(dt, 0.1f);  // clamp to avoid spiral-of-death on pause/debug
+
         while (SDL_PollEvent(&ev)) {
             switch (ev.type) {
                 case SDL_EVENT_QUIT:
@@ -146,6 +175,7 @@ int main(int /*argc*/, char* /*argv*/[])
             }
         }
 
+        nc.tick(dt);
         nc.render();
         SDL_UpdateTexture(tex, nullptr, nc.pixels(), nc.canvasW() * sizeof(uint32_t));
         SDL_RenderClear(renderer);

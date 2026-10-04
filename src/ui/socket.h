@@ -14,6 +14,8 @@ public:
 
     static constexpr float kR = 7.f;
 
+    Value value;   // current value on this socket (written by owning node, read by downstream)
+
     SocketWidget(SocketDir d, int idx, std::string lbl)
         : dir(d), index(idx), label(std::move(lbl))
     { width = height = kR * 2.f; }

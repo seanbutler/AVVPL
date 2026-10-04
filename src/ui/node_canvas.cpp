@@ -6,6 +6,24 @@ NodeCanvas::NodeCanvas(int w, int h) : cw(w), ch(h) {
     canvas->target(buf.data(), w, w, h, tvg::SwCanvas::Colorspace::ARGB8888S);
 }
 
+// Walk widget tree clearing trigger values on all sockets.
+static void clearTriggers(Widget* w) {
+    if (auto* s = dynamic_cast<SocketWidget*>(w))
+        s->value.trig = false;
+    for (auto& c : w->children) clearTriggers(c.get());
+}
+
+void NodeCanvas::tick(float dt) {
+    // 1. Clear stale one-frame triggers from last tick's propagation.
+    for (auto& n : nodes) clearTriggers(n.get());
+
+    // 2. Execute all nodes (read inputs → update state → write outputs).
+    for (auto& n : nodes) n->tick(dt);
+
+    // 3. Propagate output values along wires to downstream input sockets.
+    wireLayer.propagate();
+}
+
 Node* NodeCanvas::addNode(std::unique_ptr<Node> n) {
     auto* raw = n.get();
     nodes.push_back(std::move(n));

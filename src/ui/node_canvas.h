@@ -17,6 +17,9 @@ public:
 
     WireLayer& wires() { return wireLayer; }
 
+    // Advance all node logic by dt seconds. Call once per frame before render().
+    void tick(float dt);
+
     // Render everything into pixels[].
     void render();
     const uint32_t* pixels() const { return buf.data(); }

@@ -8,7 +8,7 @@
 //   - input sockets on the left edge
 //   - output sockets on the right edge
 //   - a body area where child widgets (sliders, dials, histograms) are stacked vertically
-class Node final : public Widget {
+class Node : public Widget {
 public:
     std::string title;
     bool        selected = false;
@@ -47,6 +47,10 @@ public:
         return worldPt.x >= wp.x && worldPt.x <= wp.x + width
             && worldPt.y >= wp.y && worldPt.y <= wp.y + kTitleH;
     }
+
+    // Called each frame by NodeCanvas::tick(). Override in subclasses to
+    // read input socket values, update internal state, write output socket values.
+    virtual void tick(float /*dt*/) {}
 
     bool contains(Vec2 worldPt) const override {
         Vec2 wp = worldPos();

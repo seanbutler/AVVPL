@@ -32,6 +32,10 @@ public:
     // Walk widget tree collecting all SocketWidgets.
     SocketWidget* findSocketAt(Vec2 worldPt, const std::vector<std::unique_ptr<Widget>>& roots) const;
 
+    // Copy each output socket's value to its connected input socket.
+    // Call once per tick, after all nodes have written their outputs.
+    void propagate();
+
     void draw(tvg::Scene& scene) const;
 
 private:
