@@ -9,6 +9,17 @@ include(FetchContent)
 include(ExternalProject)
 find_package(OpenMP)
 
+# ── nlohmann/json ─────────────────────────────────────────────────────────────
+FetchContent_Declare(
+  nlohmann_json
+  GIT_REPOSITORY https://github.com/nlohmann/json.git
+  GIT_TAG        v3.11.3
+  GIT_SHALLOW    TRUE
+)
+set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
+set(JSON_Install    OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(nlohmann_json)
+
 # ── SDL3 ──────────────────────────────────────────────────────────────────────
 FetchContent_Declare(
   SDL3
@@ -79,11 +90,14 @@ add_executable(${PROJECT_NAME}
   src/ui/histogram.cpp
   src/ui/node.cpp
   src/ui/node_canvas.cpp
+  src/ui/graph_io.cpp
+  src/ui/palette.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
   SDL3::SDL3-static
   thorvg::thorvg
+  nlohmann_json::nlohmann_json
   $<$<BOOL:${OpenMP_CXX_FOUND}>:OpenMP::OpenMP_CXX>
 )
 

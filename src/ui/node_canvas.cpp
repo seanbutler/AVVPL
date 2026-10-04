@@ -1,5 +1,26 @@
 #include "node_canvas.h"
 
+// ── Font state ────────────────────────────────────────────────────────────────
+
+static bool        s_fontLoaded = false;
+static std::string s_fontName;
+
+bool NodeCanvas::loadFont(const std::string& path) {
+    if (tvg::Text::load(path) != tvg::Result::Success) return false;
+    // Derive name: stem of path without directory or extension
+    auto slash = path.rfind('/');
+    auto stem  = (slash == std::string::npos) ? path : path.substr(slash + 1);
+    auto dot   = stem.rfind('.');
+    if (dot != std::string::npos) stem = stem.substr(0, dot);
+    s_fontName   = stem;
+    s_fontLoaded = true;
+    return true;
+}
+bool        NodeCanvas::fontLoaded() { return s_fontLoaded; }
+const std::string& NodeCanvas::fontName()  { return s_fontName; }
+
+// ── NodeCanvas ────────────────────────────────────────────────────────────────
+
 NodeCanvas::NodeCanvas(int w, int h) : cw(w), ch(h) {
     buf.assign(w * h, 0);
     canvas = tvg::SwCanvas::gen();
@@ -28,6 +49,15 @@ Node* NodeCanvas::addNode(std::unique_ptr<Node> n) {
     auto* raw = n.get();
     nodes.push_back(std::move(n));
     return raw;
+}
+
+void NodeCanvas::clear() {
+    wireLayer.wires.clear();
+    wireLayer.cancelDraft();
+    nodes.clear();
+    captured       = nullptr;
+    isWireDrag     = false;
+    capturedIsDrag = false;
 }
 
 // Walk a widget tree collecting the first SocketWidget that contains pt.
@@ -76,6 +106,8 @@ void NodeCanvas::render() {
 
     for (auto& n : nodes)
         n->drawAll(*root);
+
+    if (overlayFn) overlayFn(*root);
 
     canvas->push(std::move(root));
     canvas->draw();

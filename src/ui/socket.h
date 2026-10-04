@@ -31,6 +31,11 @@ public:
         return dx*dx + dy*dy <= (kR+3.f)*(kR+3.f);  // slightly enlarged for easier picking
     }
 
+    nlohmann::json toJson()  const override { return value.f; }
+    void fromJson(const nlohmann::json& j) override {
+        if (j.is_number()) value.f = j.get<float>();
+    }
+
     void draw(tvg::Scene& scene) override {
         Vec2 c = worldCenter();
         Color4 fill = (dir == SocketDir::Input) ? pal::SockIn : pal::SockOut;

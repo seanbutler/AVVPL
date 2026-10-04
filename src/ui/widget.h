@@ -3,6 +3,7 @@
 #include <thorvg.h>
 #include <memory>
 #include <vector>
+#include <nlohmann/json.hpp>
 
 class Widget {
 public:
@@ -43,6 +44,10 @@ public:
 
     // Default drag: translate self in parent space.
     virtual void onDrag(Vec2 delta) { localPos += delta; }
+
+    // Serialization: concrete value widgets override these.
+    virtual nlohmann::json  toJson()   const    { return nullptr; }
+    virtual void            fromJson(const nlohmann::json&) {}
 
     void addChild(std::unique_ptr<Widget> w) {
         w->parent = this;

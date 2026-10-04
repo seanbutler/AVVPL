@@ -3,109 +3,142 @@
 #include <thorvg.h>
 
 #include "ui/node_canvas.h"
+#include "ui/node_registry.h"
+#include "ui/graph_io.h"
+#include "ui/palette.h"
 #include "ui/slider.h"
 #include "ui/dial.h"
 #include "ui/histogram.h"
 #include "ui/timer_node.h"
 
+#include <cmath>
 #include <cstdlib>
 #include <memory>
 
 static constexpr int W = 1280;
 static constexpr int H = 800;
 
-static void buildScene(NodeCanvas& nc)
-{
-    // ── Node A: Oscillator ────────────────────────────────────────────────────
-    auto nA = std::make_unique<Node>("Oscillator", Vec2{80, 80});
-    nA->addInput("Freq Mod");
-    nA->addInput("Amp Mod");
-    auto* freqSlider = nA->addWidget(std::make_unique<SliderWidget>("Freq", 20.f, 2000.f, 440.f));
-    auto* ampDial    = nA->addWidget(std::make_unique<DialWidget>  ("Amp",   0.f,    1.f,   0.7f));
-    auto* outA       = nA->addOutput("Audio");
-    auto* outPhase   = nA->addOutput("Phase");
-    (void)freqSlider; (void)ampDial; (void)outA; (void)outPhase;
-    auto* pA = nc.addNode(std::move(nA));
+// ── Node factory functions ────────────────────────────────────────────────────
 
-    // ── Node B: Filter ────────────────────────────────────────────────────────
-    auto nB = std::make_unique<Node>("Filter", Vec2{360, 60});
-    auto* inFilter  = nB->addInput("Audio In");
-    auto* inCutoff  = nB->addInput("Cutoff CV");
-    auto* cutSlider = nB->addWidget(std::make_unique<SliderWidget>("Cutoff", 20.f, 20000.f, 1200.f));
-    auto* resDial   = nB->addWidget(std::make_unique<DialWidget>  ("Resonance", 0.f, 1.f, 0.3f));
-    auto* outFilter = nB->addOutput("Audio");
-    (void)inCutoff; (void)cutSlider; (void)resDial; (void)outFilter;
-    auto* pB = nc.addNode(std::move(nB));
-    (void)pB;
+static std::unique_ptr<Node> makeOscillator(Vec2 pos) {
+    auto n = std::make_unique<Node>("Oscillator", pos);
+    n->addInput("Freq Mod");
+    n->addInput("Amp Mod");
+    auto* s = n->addWidget(std::make_unique<SliderWidget>("Freq", 20.f, 2000.f, 440.f));
+    n->addWidget(std::make_unique<DialWidget>("Amp", 0.f, 1.f, 0.7f));
+    n->addOutput("Audio");
+    n->addOutput("Phase");
+    (void)s;
+    return n;
+}
 
-    // ── Node C: Envelope ─────────────────────────────────────────────────────
-    auto nC = std::make_unique<Node>("Envelope", Vec2{360, 290});
-    nC->addInput("Gate");
-    auto* envCurve = nC->addWidget(std::make_unique<HistogramWidget>(8, 0.5f));
-    // Ramp up shape
-    if (envCurve) {
-        for (int i = 0; i < 8; ++i)
-            envCurve->values[i] = (float)i / 7.f;
+static std::unique_ptr<Node> makeFilter(Vec2 pos) {
+    auto n = std::make_unique<Node>("Filter", pos);
+    n->addInput("Audio In");
+    n->addInput("Cutoff CV");
+    n->addWidget(std::make_unique<SliderWidget>("Cutoff", 20.f, 20000.f, 1200.f));
+    n->addWidget(std::make_unique<DialWidget>("Resonance", 0.f, 1.f, 0.3f));
+    n->addOutput("Audio");
+    return n;
+}
+
+static std::unique_ptr<Node> makeEnvelope(Vec2 pos) {
+    auto n = std::make_unique<Node>("Envelope", pos);
+    n->addInput("Gate");
+    auto* h = n->addWidget(std::make_unique<HistogramWidget>(8, 0.5f));
+    for (int i = 0; i < 8; ++i) h->values[i] = (float)i / 7.f;
+    n->addOutput("CV Out");
+    return n;
+}
+
+static std::unique_ptr<Node> makeSpectral(Vec2 pos) {
+    auto n = std::make_unique<Node>("Spectral", pos);
+    n->addInput("Audio");
+    n->addInput("Shape CV");
+    auto* sp = n->addWidget(std::make_unique<HistogramWidget>(16, 0.5f));
+    for (int i = 0; i < 16; ++i) {
+        float t = (float)i / 15.f;
+        sp->values[i] = std::exp(-12.f * (t - 0.5f) * (t - 0.5f));
     }
-    auto* outEnv = nC->addOutput("CV Out");
-    (void)outEnv;
-    auto* pC = nc.addNode(std::move(nC));
-    (void)pC;
+    n->addWidget(std::make_unique<DialWidget>("Gain", 0.f, 2.f, 1.f));
+    n->addOutput("Audio");
+    n->addOutput("Peaks");
+    return n;
+}
 
-    // ── Node D: Spectral shaper ───────────────────────────────────────────────
-    auto nD = std::make_unique<Node>("Spectral", Vec2{640, 80});
-    nD->addInput("Audio");
-    nD->addInput("Shape CV");
-    auto* spectrum = nD->addWidget(std::make_unique<HistogramWidget>(16, 0.5f));
-    // A gentle bell curve
-    if (spectrum) {
-        for (int i = 0; i < 16; ++i) {
-            float t = (float)i / 15.f;
-            float v = std::exp(-12.f * (t - 0.5f) * (t - 0.5f));
-            spectrum->values[i] = v;
-        }
-    }
-    auto* gainDial = nD->addWidget(std::make_unique<DialWidget>("Gain", 0.f, 2.f, 1.f));
-    nD->addOutput("Audio");
-    nD->addOutput("Peaks");
-    (void)gainDial;
-    nc.addNode(std::move(nD));
+static std::unique_ptr<Node> makeOutput(Vec2 pos) {
+    auto n = std::make_unique<Node>("Output", pos);
+    n->addInput("Audio L");
+    n->addInput("Audio R");
+    n->addWidget(std::make_unique<SliderWidget>("Volume", 0.f, 1.f, 0.8f));
+    return n;
+}
 
-    // ── Node E: Output ────────────────────────────────────────────────────────
-    auto nE = std::make_unique<Node>("Output", Vec2{900, 150});
-    auto* inOut  = nE->addInput("Audio L");
-    auto* inOut2 = nE->addInput("Audio R");
-    auto* volSlider = nE->addWidget(std::make_unique<SliderWidget>("Volume", 0.f, 1.f, 0.8f));
-    (void)inOut; (void)inOut2; (void)volSlider;
-    nc.addNode(std::move(nE));
+static std::unique_ptr<Node> makeTimer(Vec2 pos) {
+    auto n = std::make_unique<TimerNode>(pos);
+    auto* s = n->addWidget(std::make_unique<SliderWidget>("Duration", 0.5f, 8.f, 3.f));
+    s->onChange = [raw = n.get()](float v) { raw->inDuration->value.f = v; };
+    return n;
+}
 
-    // ── Node F: Loop timer ────────────────────────────────────────────────────
-    auto loopOwned = std::make_unique<LoopTimerNode>(Vec2{80, 500});
-    auto* loop     = loopOwned.get();
-    loop->inInterval->value.f = 1.0f;
-    {
-        auto* s = loop->addWidget(std::make_unique<SliderWidget>("Interval", 0.1f, 4.f, 1.0f));
-        s->onChange = [loop](float v) { loop->inInterval->value.f = v; };
-    }
+static std::unique_ptr<Node> makeLoop(Vec2 pos) {
+    auto n = std::make_unique<LoopTimerNode>(pos);
+    auto* s = n->addWidget(std::make_unique<SliderWidget>("Interval", 0.1f, 4.f, 1.f));
+    s->onChange = [raw = n.get()](float v) { raw->inInterval->value.f = v; };
+    return n;
+}
+
+// ── Register all node types ───────────────────────────────────────────────────
+
+static void registerNodes() {
+    auto& reg = NodeRegistry::get();
+    reg.reg("Oscillator", "Oscillator", {60,  80, 160, 255}, makeOscillator);
+    reg.reg("Filter",     "Filter",     {80, 120,  60, 255}, makeFilter);
+    reg.reg("Envelope",   "Envelope",   {130, 80,  60, 255}, makeEnvelope);
+    reg.reg("Spectral",   "Spectral",   {80,  60, 140, 255}, makeSpectral);
+    reg.reg("Output",     "Output",     {60, 120, 120, 255}, makeOutput);
+    reg.reg("Timer",      "Timer",      {160, 60,  60, 255}, makeTimer);
+    reg.reg("Loop",       "Loop",       {60, 160,  90, 255}, makeLoop);
+}
+
+// ── Build initial demo scene ──────────────────────────────────────────────────
+
+static void buildScene(NodeCanvas& nc) {
+    auto* osc  = nc.addNode(makeOscillator({130, 60}));
+    auto* filt = nc.addNode(makeFilter    ({370, 50}));
+    auto* env  = nc.addNode(makeEnvelope  ({370, 290}));
+               nc.addNode(makeSpectral    ({650, 60}));
+               nc.addNode(makeOutput      ({920, 150}));
+
+    auto loopOwned = makeLoop({130, 490});
+    auto* loop = static_cast<LoopTimerNode*>(loopOwned.get());
     nc.addNode(std::move(loopOwned));
 
-    // ── Node G: One-shot timer ────────────────────────────────────────────────
-    auto timerOwned = std::make_unique<TimerNode>(Vec2{340, 500});
-    auto* timer     = timerOwned.get();
-    timer->inDuration->value.f = 3.f;
-    {
-        auto* s = timer->addWidget(std::make_unique<SliderWidget>("Duration", 0.5f, 8.f, 3.f));
-        s->onChange = [timer](float v) { timer->inDuration->value.f = v; };
-    }
-    // Loop's Tick resets the one-shot timer → it restarts every interval.
-    nc.wires().connect(loop->outTick, timer->inReset);
+    auto timerOwned = makeTimer({370, 490});
+    auto* timer = static_cast<TimerNode*>(timerOwned.get());
     nc.addNode(std::move(timerOwned));
 
-    // ── Pre-wire signal connections ───────────────────────────────────────────
-    nc.wires().connect(outA,   inFilter);   // Osc → Filter audio
-    nc.wires().connect(outEnv, inCutoff);   // Envelope → Filter cutoff
-    (void)pA;
+    // Pre-wire signal connections
+    // Find sockets by traversing the node children
+    auto sockOut = [](Node* n, int idx) -> SocketWidget* {
+        for (auto& c : n->children)
+            if (auto* s = dynamic_cast<SocketWidget*>(c.get()))
+                if (s->dir == SocketDir::Output && s->index == idx) return s;
+        return nullptr;
+    };
+    auto sockIn = [](Node* n, int idx) -> SocketWidget* {
+        for (auto& c : n->children)
+            if (auto* s = dynamic_cast<SocketWidget*>(c.get()))
+                if (s->dir == SocketDir::Input && s->index == idx) return s;
+        return nullptr;
+    };
+
+    if (auto* a = sockOut(osc,  0)) if (auto* b = sockIn(filt, 0)) nc.wires().connect(a, b);
+    if (auto* a = sockOut(env,  0)) if (auto* b = sockIn(filt, 1)) nc.wires().connect(a, b);
+    if (auto* a = loop->outTick)    if (auto* b = timer->inReset)   nc.wires().connect(a, b);
 }
+
+// ── Main ──────────────────────────────────────────────────────────────────────
 
 int main(int /*argc*/, char* /*argv*/[])
 {
@@ -113,6 +146,8 @@ int main(int /*argc*/, char* /*argv*/[])
         SDL_Log("ThorVG init failed");
         return EXIT_FAILURE;
     }
+
+    NodeCanvas::loadFont("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
 
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         SDL_Log("SDL_Init: %s", SDL_GetError());
@@ -141,33 +176,47 @@ int main(int /*argc*/, char* /*argv*/[])
         return EXIT_FAILURE;
     }
 
+    registerNodes();
+
     NodeCanvas nc(W, H);
     buildScene(nc);
 
-    bool     running  = true;
+    Palette palette(H, nc);
+    nc.setOverlay([&palette](tvg::Scene& s){ palette.draw(s); });
+
+    bool   running  = true;
     SDL_Event ev;
-    Uint64   lastTick = SDL_GetTicksNS();
+    Uint64 lastTick = SDL_GetTicksNS();
 
     while (running) {
         Uint64 now = SDL_GetTicksNS();
         float  dt  = (float)((now - lastTick) * 1e-9);
         lastTick   = now;
-        dt = std::min(dt, 0.1f);  // clamp to avoid spiral-of-death on pause/debug
+        dt = std::min(dt, 0.1f);
 
         while (SDL_PollEvent(&ev)) {
             switch (ev.type) {
                 case SDL_EVENT_QUIT:
                     running = false;
                     break;
+
                 case SDL_EVENT_KEY_DOWN:
                     if (ev.key.key == SDLK_ESCAPE) running = false;
+                    if (ev.key.key == SDLK_S && (ev.key.mod & SDL_KMOD_CTRL))
+                        graphSave(nc, "graph.json");
+                    if (ev.key.key == SDLK_O && (ev.key.mod & SDL_KMOD_CTRL))
+                        graphLoad(nc, "graph.json");
                     break;
+
                 case SDL_EVENT_MOUSE_BUTTON_DOWN:
-                    nc.onMouseDown(ev.button.x, ev.button.y, ev.button.button);
+                    if (!palette.onMouseDown(ev.button.x, ev.button.y))
+                        nc.onMouseDown(ev.button.x, ev.button.y, ev.button.button);
                     break;
+
                 case SDL_EVENT_MOUSE_BUTTON_UP:
                     nc.onMouseUp(ev.button.x, ev.button.y, ev.button.button);
                     break;
+
                 case SDL_EVENT_MOUSE_MOTION:
                     nc.onMouseMove(ev.motion.x, ev.motion.y,
                                    ev.motion.xrel, ev.motion.yrel);
@@ -177,6 +226,7 @@ int main(int /*argc*/, char* /*argv*/[])
 
         nc.tick(dt);
         nc.render();
+
         SDL_UpdateTexture(tex, nullptr, nc.pixels(), nc.canvasW() * sizeof(uint32_t));
         SDL_RenderClear(renderer);
         SDL_RenderTexture(renderer, tex, nullptr, nullptr);

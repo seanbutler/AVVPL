@@ -23,6 +23,16 @@ public:
     }
 
     void draw(tvg::Scene& scene) override;
+
+    nlohmann::json toJson() const override {
+        return nlohmann::json(values);
+    }
+    void fromJson(const nlohmann::json& j) override {
+        if (!j.is_array()) return;
+        for (size_t i = 0; i < values.size() && i < j.size(); ++i)
+            values[i] = clamp01(j[i].get<float>());
+    }
+
     void onMouseDown(Vec2 pt, int) override { setBarFromPt(pt); }
     void onMouseMove(Vec2 pt, Vec2) override { if (activeBin >= 0) setBarFromPt(pt); }
     void onMouseUp  (Vec2, int) override { activeBin = -1; }

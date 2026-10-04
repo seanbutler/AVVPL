@@ -29,7 +29,12 @@ public:
     void draw(tvg::Scene& scene) override;
     void onMouseDown(Vec2 pt, int) override { setFromX(pt.x); }
     void onMouseMove(Vec2 pt, Vec2)  override { setFromX(pt.x); }
-    void onDrag(Vec2) override {}  // value changes handled by onMouseMove
+    void onDrag(Vec2) override {}
+
+    nlohmann::json toJson()  const override { return value; }
+    void fromJson(const nlohmann::json& j) override {
+        if (j.is_number()) value = clampf(j.get<float>(), min, max);
+    }
 
 private:
     void setFromX(float worldX) {

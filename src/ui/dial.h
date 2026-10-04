@@ -40,6 +40,11 @@ public:
     void onMouseMove(Vec2 pt, Vec2 delta) override;
     void onDrag(Vec2) override {}
 
+    nlohmann::json toJson()  const override { return value; }
+    void fromJson(const nlohmann::json& j) override {
+        if (j.is_number()) value = clampf(j.get<float>(), min, max);
+    }
+
 private:
     float dragY = -1.f;
 
