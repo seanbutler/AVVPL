@@ -120,10 +120,26 @@ void NodeCanvas::onMouseDown(float x, float y, int btn) {
     Vec2 pt = {x, y};
     lastMouse = pt;
 
-    // Right-click: disconnect socket or nearest wire.
+    // Right-click: disconnect socket, delete node, or remove wire.
     if (btn == 3) {
         if (auto* sock = socketAt(pt)) {
             wireLayer.disconnectSocket(sock);
+        } else if (Widget* hit = hitTest(pt)) {
+            // Walk up to find the owning Node.
+            Widget* w = hit;
+            Node*   n = nullptr;
+            while (w) { if ((n = dynamic_cast<Node*>(w))) break; w = w->parent; }
+            if (n) {
+                // Disconnect every socket on this node first.
+                for (auto& child : n->children)
+                    if (auto* s = dynamic_cast<SocketWidget*>(child.get()))
+                        wireLayer.disconnectSocket(s);
+                // Erase the node.
+                nodes.erase(std::remove_if(nodes.begin(), nodes.end(),
+                    [n](const auto& owned){ return owned.get() == n; }), nodes.end());
+                if (captured && (captured == n || captured->parent == n))
+                    captured = nullptr;
+            }
         } else {
             int idx = wireLayer.wireAt(pt);
             if (idx >= 0) {
