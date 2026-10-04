@@ -1,0 +1,64 @@
+#pragma once
+#include "widget.h"
+#include "socket.h"
+#include <string>
+
+// A draggable container node with:
+//   - a title bar (drag handle)
+//   - input sockets on the left edge
+//   - output sockets on the right edge
+//   - a body area where child widgets (sliders, dials, histograms) are stacked vertically
+class Node final : public Widget {
+public:
+    std::string title;
+    bool        selected = false;
+
+    static constexpr float kCornerR    =  8.f;
+    static constexpr float kTitleH     = 24.f;
+    static constexpr float kPadX       = 10.f;
+    static constexpr float kPadY       =  6.f;
+    static constexpr float kSockSpaceY = 22.f;  // vertical gap between sockets
+    static constexpr float kSockOffY   = kTitleH + 10.f;  // first socket Y offset
+    static constexpr float kMinWidth   = 180.f;
+
+    explicit Node(std::string t, Vec2 pos = {})
+        : title(std::move(t))
+    { localPos = pos; width = kMinWidth; height = kTitleH + kPadY; }
+
+    // Add an input socket and return a raw pointer for wiring.
+    SocketWidget* addInput (std::string label);
+    SocketWidget* addOutput(std::string label);
+
+    // Add a body widget; adjusts height automatically.
+    // Returns raw pointer for setting callbacks.
+    template<typename T>
+    T* addWidget(std::unique_ptr<T> w) {
+        w->width    = width - 2.f * kPadX;
+        w->localPos = {kPadX, height};
+        height     += w->height + kPadY;
+        auto* raw   = w.get();
+        addChild(std::move(w));
+        return raw;
+    }
+
+    // Hit-test: only count as a drag candidate when the title bar is hit.
+    bool titleBarHit(Vec2 worldPt) const {
+        Vec2 wp = worldPos();
+        return worldPt.x >= wp.x && worldPt.x <= wp.x + width
+            && worldPt.y >= wp.y && worldPt.y <= wp.y + kTitleH;
+    }
+
+    bool contains(Vec2 worldPt) const override {
+        Vec2 wp = worldPos();
+        return worldPt.x >= wp.x && worldPt.x <= wp.x + width
+            && worldPt.y >= wp.y && worldPt.y <= wp.y + height;
+    }
+
+    void draw(tvg::Scene& scene) override;
+
+private:
+    int sockInputCount  = 0;
+    int sockOutputCount = 0;
+
+    void layoutSockets();
+};
