@@ -92,6 +92,7 @@ add_executable(${PROJECT_NAME}
   src/ui/node_canvas.cpp
   src/ui/graph_io.cpp
   src/ui/palette.cpp
+  src/ui/tone_node.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE

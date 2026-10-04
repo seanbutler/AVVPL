@@ -22,10 +22,11 @@ NodeCanvas::NodeCanvas(int w, int h) : cw(w), ch(h) {
     canvas->target(buf.data(), w, w, h, tvg::SwCanvas::Colorspace::ARGB8888S);
 }
 
-// Walk widget tree clearing trigger values on all sockets.
+// Clear trigger flags on output sockets only. Input triggers are overwritten
+// each frame by propagate(), so they naturally clear without explicit reset.
 static void clearTriggers(Widget* w) {
     if (auto* s = dynamic_cast<SocketWidget*>(w))
-        s->value.trig = false;
+        if (s->dir == SocketDir::Output) s->value.trig = false;
     for (auto& c : w->children) clearTriggers(c.get());
 }
 
@@ -118,6 +119,20 @@ Widget* NodeCanvas::hitTest(Vec2 pt) {
 void NodeCanvas::onMouseDown(float x, float y, int btn) {
     Vec2 pt = {x, y};
     lastMouse = pt;
+
+    // Right-click: disconnect socket or nearest wire.
+    if (btn == 3) {
+        if (auto* sock = socketAt(pt)) {
+            wireLayer.disconnectSocket(sock);
+        } else {
+            int idx = wireLayer.wireAt(pt);
+            if (idx >= 0) {
+                wireLayer.wires[idx].to->connected = false;
+                wireLayer.wires.erase(wireLayer.wires.begin() + idx);
+            }
+        }
+        return;
+    }
 
     // Socket click → wire drag (check before general hit test).
     if (auto* sock = socketAt(pt)) {

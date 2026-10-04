@@ -56,10 +56,13 @@ void WireLayer::connect(SocketWidget* from, SocketWidget* to) {
     wires.erase(std::remove_if(wires.begin(), wires.end(),
         [to](const Wire& w){ return w.to == to; }), wires.end());
     wires.push_back({from, to});
+    to->connected = true;
     if (to->onConnect) to->onConnect();
 }
 
 void WireLayer::disconnectSocket(SocketWidget* sock) {
+    for (auto& w : wires)
+        if (w.to == sock) w.to->connected = false;
     wires.erase(std::remove_if(wires.begin(), wires.end(),
         [sock](const Wire& w){ return w.from == sock || w.to == sock; }), wires.end());
 }
@@ -71,6 +74,29 @@ SocketWidget* WireLayer::findSocketAt(Vec2 worldPt,
     for (auto& root : roots)
         gatherSockets(root.get(), worldPt, result);
     return result;
+}
+
+int WireLayer::wireAt(Vec2 pt, float threshold) const {
+    int   best  = -1;
+    float bestD = threshold;
+    for (int i = 0; i < (int)wires.size(); ++i) {
+        Vec2  a  = wires[i].from->worldCenter();
+        Vec2  b  = wires[i].to->worldCenter();
+        float dx = std::abs(b.x - a.x) * 0.5f + 30.f;
+        // Sample cubic bezier at 32 points
+        for (int s = 0; s <= 32; ++s) {
+            float t  = s / 32.f;
+            float mt = 1.f - t;
+            // Control points: a, a+(dx,0), b-(dx,0), b
+            float cx = a.x + dx, cy = a.y;
+            float dx2 = b.x - dx, dy2 = b.y;
+            float bx = mt*mt*mt*a.x + 3*mt*mt*t*cx + 3*mt*t*t*dx2 + t*t*t*b.x;
+            float by = mt*mt*mt*a.y + 3*mt*mt*t*cy + 3*mt*t*t*dy2 + t*t*t*b.y;
+            float d  = std::sqrt((pt.x-bx)*(pt.x-bx) + (pt.y-by)*(pt.y-by));
+            if (d < bestD) { bestD = d; best = i; }
+        }
+    }
+    return best;
 }
 
 void WireLayer::propagate() {

@@ -43,13 +43,34 @@ void Node::draw(tvg::Scene& scene) {
     // Cover bottom-round of title bar with a square-bottomed rect
     pushRect(scene, wp.x, wp.y + kTitleH * 0.5f, width, kTitleH * 0.5f, 0.f, titleCol);
 
-    // Title text — baseline centred vertically in the title bar
+    // Title text
     if (NodeCanvas::fontLoaded() && !title.empty()) {
         auto t = tvg::Text::gen();
         if (t->font(NodeCanvas::fontName().c_str(), 11.f) == tvg::Result::Success) {
             t->text(title.c_str());
             t->fill(220, 220, 235);
             t->translate(wp.x + kPadX, wp.y + kTitleH * 0.5f + 4.f);
+            scene.push(std::move(t));
+        }
+    }
+
+    // Socket labels
+    if (NodeCanvas::fontLoaded()) {
+        for (auto& child : children) {
+            auto* s = dynamic_cast<SocketWidget*>(child.get());
+            if (!s || s->label.empty()) continue;
+            auto t = tvg::Text::gen();
+            if (t->font(NodeCanvas::fontName().c_str(), 9.f) != tvg::Result::Success) break;
+            t->text(s->label.c_str());
+            t->fill(150, 150, 170);
+            Vec2 c = s->worldCenter();
+            if (s->dir == SocketDir::Input) {
+                t->translate(c.x + SocketWidget::kR + 3.f, c.y + 4.f);
+            } else {
+                // Approximate label width at 9pt (~5.5px per char) to right-align
+                float labelW = s->label.size() * 5.5f;
+                t->translate(c.x - SocketWidget::kR - 3.f - labelW, c.y + 4.f);
+            }
             scene.push(std::move(t));
         }
     }

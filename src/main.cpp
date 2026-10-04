@@ -10,6 +10,9 @@
 #include "ui/dial.h"
 #include "ui/histogram.h"
 #include "ui/timer_node.h"
+#include "ui/tone_node.h"
+#include "ui/wave_node.h"
+#include "ui/envelope_node.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -43,12 +46,7 @@ static std::unique_ptr<Node> makeFilter(Vec2 pos) {
 }
 
 static std::unique_ptr<Node> makeEnvelope(Vec2 pos) {
-    auto n = std::make_unique<Node>("Envelope", pos);
-    n->addInput("Gate");
-    auto* h = n->addWidget(std::make_unique<HistogramWidget>(8, 0.5f));
-    for (int i = 0; i < 8; ++i) h->values[i] = (float)i / 7.f;
-    n->addOutput("CV Out");
-    return n;
+    return std::make_unique<EnvelopeNode>(pos);
 }
 
 static std::unique_ptr<Node> makeSpectral(Vec2 pos) {
@@ -99,6 +97,10 @@ static void registerNodes() {
     reg.reg("Output",     "Output",     {60, 120, 120, 255}, makeOutput);
     reg.reg("Timer",      "Timer",      {160, 60,  60, 255}, makeTimer);
     reg.reg("Loop",       "Loop",       {60, 160,  90, 255}, makeLoop);
+    reg.reg("Tone",       "Tone",       {160, 130, 40, 255},
+            [](Vec2 pos){ return std::make_unique<ToneNode>(pos); });
+    reg.reg("Wave",       "Wave",       {40,  130, 160, 255},
+            [](Vec2 pos){ return std::make_unique<WaveNode>(pos); });
 }
 
 // ── Build initial demo scene ──────────────────────────────────────────────────
@@ -149,7 +151,7 @@ int main(int /*argc*/, char* /*argv*/[])
 
     NodeCanvas::loadFont("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "DejaVuSans");
 
-    if (!SDL_Init(SDL_INIT_VIDEO)) {
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
         SDL_Log("SDL_Init: %s", SDL_GetError());
         tvg::Initializer::term(tvg::CanvasEngine::Sw);
         return EXIT_FAILURE;
@@ -179,7 +181,6 @@ int main(int /*argc*/, char* /*argv*/[])
     registerNodes();
 
     NodeCanvas nc(W, H);
-    buildScene(nc);
 
     Palette palette(H, nc);
     nc.setOverlay([&palette](tvg::Scene& s){ palette.draw(s); });

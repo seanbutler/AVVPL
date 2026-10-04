@@ -14,7 +14,8 @@ public:
 
     static constexpr float kR = 7.f;
 
-    Value value;   // current value on this socket (written by owning node, read by downstream)
+    Value value;
+    bool  connected = false;  // true when an incoming wire targets this input socket
 
     SocketWidget(SocketDir d, int idx, std::string lbl)
         : dir(d), index(idx), label(std::move(lbl))

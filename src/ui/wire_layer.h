@@ -29,6 +29,9 @@ public:
     void connect         (SocketWidget* from, SocketWidget* to);
     void disconnectSocket(SocketWidget* sock);
 
+    // Returns index into wires[] of the wire nearest to pt, or -1 if none within threshold.
+    int  wireAt(Vec2 pt, float threshold = 6.f) const;
+
     // Walk widget tree collecting all SocketWidgets.
     SocketWidget* findSocketAt(Vec2 worldPt, const std::vector<std::unique_ptr<Widget>>& roots) const;
 
