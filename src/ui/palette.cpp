@@ -102,8 +102,9 @@ void Palette::drawButton(tvg::Scene& scene, int idx, bool hovered) const {
     sh->fill(bg.r, bg.g, bg.b, bg.a);
     scene.push(std::move(sh));
 
-    // Label
-    pushText(scene, btn.label, bx + 8.f, by + 8.f, 11.f, {220, 220, 235, 255});
+    // Label — baseline sits roughly at the vertical centre of the button.
+    // At 11pt the cap-height is ~8px; place baseline at centre + half cap-height.
+    pushText(scene, btn.label, bx + 8.f, by + kBtnH * 0.5f + 4.f, 11.f, {220, 220, 235, 255});
 }
 
 void Palette::draw(tvg::Scene& scene) const {
@@ -123,8 +124,8 @@ void Palette::draw(tvg::Scene& scene) const {
         scene.push(std::move(border));
     }
 
-    // Title
-    pushText(scene, "Nodes", kPadX, 4.f, 10.f, {120, 120, 140, 255});
+    // Title label
+    pushText(scene, "Nodes", kPadX, 14.f, 10.f, {120, 120, 140, 255});
 
     for (int i = 0; i < (int)buttons.size(); ++i) {
         if (buttons[i].isSeparator) {

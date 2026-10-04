@@ -24,8 +24,9 @@ public:
     void clear();
     const std::vector<std::unique_ptr<Node>>& allNodes() const { return nodes; }
 
-    // Font loading (call once at startup; text labels shown if font found)
-    static bool loadFont(const std::string& path);
+    // Font loading. `familyName` must match the TTF's internal family name
+    // (e.g. "DejaVu Sans" for DejaVuSans.ttf, "Ubuntu" for Ubuntu-R.ttf).
+    static bool loadFont(const std::string& path, const std::string& familyName);
     static bool fontLoaded();
     static const std::string& fontName();
 

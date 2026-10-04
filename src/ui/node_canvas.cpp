@@ -5,14 +5,9 @@
 static bool        s_fontLoaded = false;
 static std::string s_fontName;
 
-bool NodeCanvas::loadFont(const std::string& path) {
+bool NodeCanvas::loadFont(const std::string& path, const std::string& familyName) {
     if (tvg::Text::load(path) != tvg::Result::Success) return false;
-    // Derive name: stem of path without directory or extension
-    auto slash = path.rfind('/');
-    auto stem  = (slash == std::string::npos) ? path : path.substr(slash + 1);
-    auto dot   = stem.rfind('.');
-    if (dot != std::string::npos) stem = stem.substr(0, dot);
-    s_fontName   = stem;
+    s_fontName   = familyName;
     s_fontLoaded = true;
     return true;
 }

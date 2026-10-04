@@ -1,4 +1,5 @@
 #include "node.h"
+#include "node_canvas.h"
 
 SocketWidget* Node::addInput(std::string label) {
     auto s = std::make_unique<SocketWidget>(SocketDir::Input, sockInputCount, std::move(label));
@@ -41,4 +42,15 @@ void Node::draw(tvg::Scene& scene) {
     pushRect(scene, wp.x, wp.y, width, kTitleH, kCornerR, titleCol);
     // Cover bottom-round of title bar with a square-bottomed rect
     pushRect(scene, wp.x, wp.y + kTitleH * 0.5f, width, kTitleH * 0.5f, 0.f, titleCol);
+
+    // Title text — baseline centred vertically in the title bar
+    if (NodeCanvas::fontLoaded() && !title.empty()) {
+        auto t = tvg::Text::gen();
+        if (t->font(NodeCanvas::fontName().c_str(), 11.f) == tvg::Result::Success) {
+            t->text(title.c_str());
+            t->fill(220, 220, 235);
+            t->translate(wp.x + kPadX, wp.y + kTitleH * 0.5f + 4.f);
+            scene.push(std::move(t));
+        }
+    }
 }

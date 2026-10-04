@@ -147,7 +147,7 @@ int main(int /*argc*/, char* /*argv*/[])
         return EXIT_FAILURE;
     }
 
-    NodeCanvas::loadFont("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
+    NodeCanvas::loadFont("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "DejaVuSans");
 
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         SDL_Log("SDL_Init: %s", SDL_GetError());

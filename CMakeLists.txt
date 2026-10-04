@@ -58,7 +58,7 @@ ExternalProject_Add(thorvg_ep
       --libdir=lib
       --default-library=static
       -Dengines=sw
-      -Dloaders=svg,lottie,tvg
+      -Dloaders=svg,lottie,tvg,ttf
       -Dsavers=tvg
       -Dbindings=
       -Dexamples=false
