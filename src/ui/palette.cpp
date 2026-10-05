@@ -16,7 +16,6 @@ Palette::Palette(int /*canvasH*/, NodeCanvas& canvas) : nc(canvas) {
         Button btn;
         btn.label  = info->label;
         btn.color  = info->color;
-        btn.stub   = info->stub;
         btn.action = [this, typeName, &reg] {
             auto* info2 = reg.find(typeName);
             if (info2) nc.addNode(info2->create(nextSpawnPos()));
@@ -91,16 +90,11 @@ void Palette::drawButton(tvg::Scene& scene, int idx, bool hovered) const {
     float bx  = kPadX;
     float bw  = kW - kPadX * 2.f;
 
-    // Stub buttons are dimmed; active buttons brighten on hover.
-    Color4 base = btn.stub
-        ? Color4{(uint8_t)(btn.color.r / 3), (uint8_t)(btn.color.g / 3),
-                 (uint8_t)(btn.color.b / 3), 200}
+    Color4 bg = hovered
+        ? Color4{(uint8_t)std::min(255, btn.color.r + 30),
+                 (uint8_t)std::min(255, btn.color.g + 30),
+                 (uint8_t)std::min(255, btn.color.b + 30), 255}
         : btn.color;
-    Color4 bg = (!btn.stub && hovered)
-        ? Color4{(uint8_t)std::min(255, base.r + 30),
-                 (uint8_t)std::min(255, base.g + 30),
-                 (uint8_t)std::min(255, base.b + 30), 255}
-        : base;
 
     auto sh = tvg::Shape::gen();
     sh->appendRect(bx, by, bw, kBtnH, kCorner, kCorner);
@@ -108,21 +102,7 @@ void Palette::drawButton(tvg::Scene& scene, int idx, bool hovered) const {
     scene.push(std::move(sh));
 
     // Label — baseline sits roughly at the vertical centre of the button.
-    Color4 labelColor = btn.stub ? Color4{130, 130, 145, 180} : Color4{220, 220, 235, 255};
-    pushText(scene, btn.label, bx + 8.f, by + kBtnH * 0.5f - 2.f, 11.f, labelColor);
-
-    // Diagonal hatch lines to mark stub nodes as non-functional.
-    if (btn.stub) {
-        auto hatch = tvg::Shape::gen();
-        hatch->moveTo(bx,        by);
-        hatch->lineTo(bx + bw,   by + kBtnH);
-        hatch->moveTo(bx,        by + kBtnH);
-        hatch->lineTo(bx + bw,   by);
-        hatch->stroke(1.f);
-        hatch->stroke(80, 80, 95, 120);
-        hatch->fill(0, 0, 0, 0);
-        scene.push(std::move(hatch));
-    }
+    pushText(scene, btn.label, bx + 8.f, by + kBtnH * 0.5f - 2.f, 11.f, {220, 220, 235, 255});
 }
 
 void Palette::draw(tvg::Scene& scene) const {

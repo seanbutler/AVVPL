@@ -46,9 +46,14 @@ public:
     int canvasH() const { return ch; }
 
     // SDL-style mouse events.
-    void onMouseDown(float x, float y, int btn);
-    void onMouseUp  (float x, float y, int btn);
-    void onMouseMove(float x, float y, float dx, float dy);
+    void onMouseDown (float x, float y, int btn);
+    void onMouseUp   (float x, float y, int btn);
+    void onMouseMove (float x, float y, float dx, float dy);
+    void onMouseWheel(float x, float y, float delta);
+
+    // Camera transform helpers.
+    Vec2 screenToWorld(Vec2 s) const { return { (s.x - camPan.x) / camZoom, (s.y - camPan.y) / camZoom }; }
+    Vec2 worldToScreen(Vec2 w) const { return { w.x * camZoom + camPan.x,   w.y * camZoom + camPan.y   }; }
 
 private:
     int cw, ch;
@@ -58,9 +63,14 @@ private:
     std::vector<std::unique_ptr<Node>> nodes;
     WireLayer wireLayer;
 
+    // Camera state
+    Vec2  camPan  = {};
+    float camZoom = 1.f;
+
     // Mouse capture state
     Widget*  captured        = nullptr;
     bool     isWireDrag      = false;
+    bool     isPanning       = false;
     bool     capturedIsDrag  = false;  // true when captured node was hit on its title bar
     Vec2     lastMouse       = {};
 

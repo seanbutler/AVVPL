@@ -1,4 +1,6 @@
 #include "node_canvas.h"
+#include <algorithm>
+#include <cmath>
 
 // ── Font state ────────────────────────────────────────────────────────────────
 
@@ -82,7 +84,7 @@ void NodeCanvas::render() {
     canvas->clear(true);
     auto root = tvg::Scene::gen();
 
-    // Background
+    // Background (screen space, always fills window)
     {
         auto bg = tvg::Shape::gen();
         bg->appendRect(0, 0, (float)cw, (float)ch, 0, 0);
@@ -90,24 +92,38 @@ void NodeCanvas::render() {
         root->push(std::move(bg));
     }
 
-    // Grid dots
+    // World scene — everything here is in world space; camera transform applied below.
     {
-        const int step = 24;
-        for (int y = 0; y < ch; y += step) {
-            for (int x = 0; x < cw; x += step) {
-                auto dot = tvg::Shape::gen();
-                dot->appendCircle((float)x, (float)y, 1.f, 1.f);
-                dot->fill(45, 45, 55, 110);
-                root->push(std::move(dot));
+        auto world = tvg::Scene::gen();
+
+        // Grid dots: compute visible world bounds to avoid drawing off-screen dots.
+        {
+            const float step = 24.f;
+            float wx0 = std::floor((            -camPan.x) / camZoom / step) * step;
+            float wy0 = std::floor((            -camPan.y) / camZoom / step) * step;
+            float wx1 =            ((float)cw  -camPan.x) / camZoom;
+            float wy1 =            ((float)ch  -camPan.y) / camZoom;
+            for (float gy = wy0; gy <= wy1; gy += step) {
+                for (float gx = wx0; gx <= wx1; gx += step) {
+                    auto dot = tvg::Shape::gen();
+                    dot->appendCircle(gx, gy, 1.f, 1.f);
+                    dot->fill(45, 45, 55, 110);
+                    world->push(std::move(dot));
+                }
             }
         }
+
+        wireLayer.draw(*world);
+        for (auto& n : nodes) n->drawAll(*world);
+
+        tvg::Matrix mat = {
+            camZoom, 0.f,     camPan.x,
+            0.f,     camZoom, camPan.y,
+            0.f,     0.f,     1.f
+        };
+        world->transform(mat);
+        root->push(std::move(world));
     }
-
-    // Wires drawn below nodes so nodes sit on top.
-    wireLayer.draw(*root);
-
-    for (auto& n : nodes)
-        n->drawAll(*root);
 
     if (overlayFn) overlayFn(*root);
 
@@ -123,24 +139,25 @@ Widget* NodeCanvas::hitTest(Vec2 pt) {
 }
 
 void NodeCanvas::onMouseDown(float x, float y, int btn) {
-    Vec2 pt = {x, y};
-    lastMouse = pt;
+    lastMouse = {x, y};
+
+    // Middle mouse: start canvas pan.
+    if (btn == 2) { isPanning = true; return; }
+
+    Vec2 pt = screenToWorld({x, y});
 
     // Right-click: disconnect socket, delete node, or remove wire.
     if (btn == 3) {
         if (auto* sock = socketAt(pt)) {
             wireLayer.disconnectSocket(sock);
         } else if (Widget* hit = hitTest(pt)) {
-            // Walk up to find the owning Node.
             Widget* w = hit;
             Node*   n = nullptr;
             while (w) { if ((n = dynamic_cast<Node*>(w))) break; w = w->parent; }
             if (n) {
-                // Disconnect every socket on this node first.
                 for (auto& child : n->children)
                     if (auto* s = dynamic_cast<SocketWidget*>(child.get()))
                         wireLayer.disconnectSocket(s);
-                // Erase the node.
                 nodes.erase(std::remove_if(nodes.begin(), nodes.end(),
                     [n](const auto& owned){ return owned.get() == n; }), nodes.end());
                 if (captured && (captured == n || captured->parent == n))
@@ -166,7 +183,6 @@ void NodeCanvas::onMouseDown(float x, float y, int btn) {
     Widget* hit = hitTest(pt);
     if (!hit) return;
 
-    // If hitTest returns a socket (missed by socketAt), start wire drag.
     if (auto* s = dynamic_cast<SocketWidget*>(hit)) {
         wireLayer.beginDraft(s, pt);
         isWireDrag = true;
@@ -174,8 +190,6 @@ void NodeCanvas::onMouseDown(float x, float y, int btn) {
     }
 
     captured = hit;
-    // Record at press-time whether this is a node title-bar drag so we don't
-    // re-evaluate it each frame against the (moving) node's position.
     capturedIsDrag = false;
     if (auto* node = dynamic_cast<Node*>(hit))
         capturedIsDrag = node->titleBarHit(pt);
@@ -184,11 +198,12 @@ void NodeCanvas::onMouseDown(float x, float y, int btn) {
 }
 
 void NodeCanvas::onMouseUp(float x, float y, int btn) {
-    Vec2 pt = {x, y};
+    if (btn == 2) { isPanning = false; return; }
+
+    Vec2 pt = screenToWorld({x, y});
 
     if (isWireDrag) {
-        SocketWidget* drop = socketAt(pt);
-        wireLayer.completeDraft(drop);
+        wireLayer.completeDraft(socketAt(pt));
         isWireDrag = false;
         return;
     }
@@ -200,9 +215,16 @@ void NodeCanvas::onMouseUp(float x, float y, int btn) {
 }
 
 void NodeCanvas::onMouseMove(float x, float y, float dx, float dy) {
-    Vec2 pt    = {x, y};
-    Vec2 delta = {dx, dy};
-    lastMouse  = pt;
+    lastMouse = {x, y};
+
+    if (isPanning) {
+        camPan.x += dx;
+        camPan.y += dy;
+        return;
+    }
+
+    Vec2 pt         = screenToWorld({x, y});
+    Vec2 worldDelta = {dx / camZoom, dy / camZoom};
 
     if (isWireDrag) {
         wireLayer.updateDraft(pt);
@@ -211,13 +233,19 @@ void NodeCanvas::onMouseMove(float x, float y, float dx, float dy) {
 
     if (!captured) return;
 
-    // Node dragging: only when the initial press was in the title bar.
     if (auto* node = dynamic_cast<Node*>(captured)) {
-        if (capturedIsDrag)
-            node->onDrag(delta);
+        if (capturedIsDrag) node->onDrag(worldDelta);
         return;
     }
 
-    // Value widget: forward move event for direct manipulation.
-    captured->onMouseMove(pt, delta);
+    captured->onMouseMove(pt, worldDelta);
+}
+
+void NodeCanvas::onMouseWheel(float x, float y, float delta) {
+    Vec2  cursor = {x, y};
+    Vec2  world  = screenToWorld(cursor);
+    float factor = delta > 0.f ? 1.1f : 1.f / 1.1f;
+    camZoom = std::clamp(camZoom * factor, 0.1f, 8.f);
+    camPan.x = cursor.x - world.x * camZoom;
+    camPan.y = cursor.y - world.y * camZoom;
 }

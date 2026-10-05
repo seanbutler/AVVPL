@@ -4,7 +4,7 @@
 #include "selector.h"
 
 // WaveformNode — outputs a waveform type as a float (0=Sine 1=Sqr 2=Saw 3=Tri).
-// Wire its output to a Tone or Oscillator Wave input.
+// Wire its output to a Tone Wave input.
 class WaveformNode final : public Node {
 public:
     SocketWidget* outWave = nullptr;

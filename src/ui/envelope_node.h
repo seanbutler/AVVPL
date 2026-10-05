@@ -9,11 +9,13 @@
 // With sustain=0 (default) the shape is attack → decay → idle, like a piano.
 class EnvelopeNode final : public Node {
 public:
-    SocketWidget* inGate = nullptr;
-    SocketWidget* outCV  = nullptr;
+    SocketWidget* inGate    = nullptr;
+    SocketWidget* inRelease = nullptr;
+    SocketWidget* outCV     = nullptr;
 
     explicit EnvelopeNode(Vec2 pos = {}) : Node("Envelope", pos) {
-        inGate = addInput("Gate");
+        inGate    = addInput("Gate");
+        inRelease = addInput("Rel");
 
         auto* aD = addWidget(std::make_unique<DialWidget>("Atk", 0.001f, 1.f,  0.01f));
         auto* dD = addWidget(std::make_unique<DialWidget>("Dec", 0.01f,  2.f,  0.3f));
@@ -36,6 +38,10 @@ public:
             envPhase = Phase::Attack;
             level = 0.f;
         }
+        if (inRelease->value.trig && envPhase != Phase::Idle) {
+            releaseFrom = level;
+            envPhase = Phase::Release;
+        }
 
         switch (envPhase) {
             case Phase::Attack:
@@ -44,14 +50,15 @@ public:
                 break;
             case Phase::Decay:
                 level -= dt / std::max(decay, 0.001f) * (1.f - sustain);
-                if (level <= sustain) { level = sustain; envPhase = Phase::Sustain; }
-                break;
-            case Phase::Sustain:
-                level = sustain;
-                if (sustain <= 0.f) envPhase = Phase::Idle;
+                if (level <= sustain) {
+                    level = sustain;
+                    releaseFrom = sustain;
+                    envPhase = Phase::Release;
+                }
                 break;
             case Phase::Release:
-                level -= dt / std::max(release, 0.001f);
+                if (releaseFrom > 0.f)
+                    level -= dt / std::max(release, 0.001f) * releaseFrom;
                 if (level <= 0.f) { level = 0.f; envPhase = Phase::Idle; }
                 break;
             case Phase::Idle:
@@ -62,9 +69,10 @@ public:
     }
 
 private:
-    enum class Phase { Idle, Attack, Decay, Sustain, Release };
+    enum class Phase { Idle, Attack, Decay, Release };
     Phase envPhase = Phase::Idle;
     float level   = 0.f;
+    float releaseFrom = 0.f;
     float attack  = 0.01f;
     float decay   = 0.3f;
     float sustain = 0.f;

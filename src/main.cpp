@@ -7,15 +7,12 @@
 #include "ui/graph_io.h"
 #include "ui/palette.h"
 #include "ui/slider.h"
-#include "ui/dial.h"
-#include "ui/histogram.h"
 #include "ui/timer_node.h"
 #include "ui/tone_node.h"
-#include "ui/wave_node.h"
 #include "ui/envelope_node.h"
-#include "ui/oscillator_node.h"
 #include "ui/number_node.h"
 #include "ui/waveform_node.h"
+#include "ui/step_seq_node.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -25,47 +22,6 @@ static int W = 1280;
 static int H = 800;
 
 // ── Node factory functions ────────────────────────────────────────────────────
-
-static std::unique_ptr<Node> makeOscillator(Vec2 pos) {
-    return std::make_unique<OscillatorNode>(pos);
-}
-
-static std::unique_ptr<Node> makeFilter(Vec2 pos) {
-    auto n = std::make_unique<Node>("Filter", pos);
-    n->addInput("Audio In");
-    n->addInput("Cutoff CV");
-    n->addWidget(std::make_unique<SliderWidget>("Cutoff", 20.f, 20000.f, 1200.f));
-    n->addWidget(std::make_unique<DialWidget>("Resonance", 0.f, 1.f, 0.3f));
-    n->addOutput("Audio");
-    return n;
-}
-
-static std::unique_ptr<Node> makeEnvelope(Vec2 pos) {
-    return std::make_unique<EnvelopeNode>(pos);
-}
-
-static std::unique_ptr<Node> makeSpectral(Vec2 pos) {
-    auto n = std::make_unique<Node>("Spectral", pos);
-    n->addInput("Audio");
-    n->addInput("Shape CV");
-    auto* sp = n->addWidget(std::make_unique<HistogramWidget>(16, 0.5f));
-    for (int i = 0; i < 16; ++i) {
-        float t = (float)i / 15.f;
-        sp->values[i] = std::exp(-12.f * (t - 0.5f) * (t - 0.5f));
-    }
-    n->addWidget(std::make_unique<DialWidget>("Gain", 0.f, 2.f, 1.f));
-    n->addOutput("Audio");
-    n->addOutput("Peaks");
-    return n;
-}
-
-static std::unique_ptr<Node> makeOutput(Vec2 pos) {
-    auto n = std::make_unique<Node>("Output", pos);
-    n->addInput("Audio L");
-    n->addInput("Audio R");
-    n->addWidget(std::make_unique<SliderWidget>("Volume", 0.f, 1.f, 0.8f));
-    return n;
-}
 
 static std::unique_ptr<Node> makeTimer(Vec2 pos) {
     auto n = std::make_unique<TimerNode>(pos);
@@ -85,58 +41,18 @@ static std::unique_ptr<Node> makeLoop(Vec2 pos) {
 
 static void registerNodes() {
     auto& reg = NodeRegistry::get();
-    reg.reg("Oscillator", "Oscillator", {60,  80, 160, 255}, makeOscillator);
-    reg.reg("Filter",     "Filter",     {80, 120,  60, 255}, makeFilter,  true);
-    reg.reg("Envelope",   "Envelope",   {130, 80,  60, 255}, makeEnvelope);
-    reg.reg("Spectral",   "Spectral",   {80,  60, 140, 255}, makeSpectral, true);
-    reg.reg("Output",     "Output",     {60, 120, 120, 255}, makeOutput,  true);
-    reg.reg("Timer",      "Timer",      {160, 60,  60, 255}, makeTimer);
-    reg.reg("Loop",       "Loop",       {60, 160,  90, 255}, makeLoop);
     reg.reg("Tone",       "Tone",       {160, 130, 40, 255},
             [](Vec2 pos){ return std::make_unique<ToneNode>(pos); });
-    reg.reg("Wave",       "Wave",       {40,  130, 160, 255},
-            [](Vec2 pos){ return std::make_unique<WaveNode>(pos); });
+    reg.reg("Envelope",   "Envelope",   {130, 80,  60, 255},
+            [](Vec2 pos){ return std::make_unique<EnvelopeNode>(pos); });
     reg.reg("Number",     "Number",     {100, 100, 140, 255},
             [](Vec2 pos){ return std::make_unique<NumberNode>(pos); });
     reg.reg("Waveform",   "Waveform",   {100, 140, 100, 255},
             [](Vec2 pos){ return std::make_unique<WaveformNode>(pos); });
-}
-
-// ── Build initial demo scene ──────────────────────────────────────────────────
-
-static void buildScene(NodeCanvas& nc) {
-    auto* osc  = nc.addNode(makeOscillator({130, 60}));
-    auto* filt = nc.addNode(makeFilter    ({370, 50}));
-    auto* env  = nc.addNode(makeEnvelope  ({370, 290}));
-               nc.addNode(makeSpectral    ({650, 60}));
-               nc.addNode(makeOutput      ({920, 150}));
-
-    auto loopOwned = makeLoop({130, 490});
-    auto* loop = static_cast<LoopTimerNode*>(loopOwned.get());
-    nc.addNode(std::move(loopOwned));
-
-    auto timerOwned = makeTimer({370, 490});
-    auto* timer = static_cast<TimerNode*>(timerOwned.get());
-    nc.addNode(std::move(timerOwned));
-
-    // Pre-wire signal connections
-    // Find sockets by traversing the node children
-    auto sockOut = [](Node* n, int idx) -> SocketWidget* {
-        for (auto& c : n->children)
-            if (auto* s = dynamic_cast<SocketWidget*>(c.get()))
-                if (s->dir == SocketDir::Output && s->index == idx) return s;
-        return nullptr;
-    };
-    auto sockIn = [](Node* n, int idx) -> SocketWidget* {
-        for (auto& c : n->children)
-            if (auto* s = dynamic_cast<SocketWidget*>(c.get()))
-                if (s->dir == SocketDir::Input && s->index == idx) return s;
-        return nullptr;
-    };
-
-    if (auto* a = sockOut(osc,  0)) if (auto* b = sockIn(filt, 0)) nc.wires().connect(a, b);
-    if (auto* a = sockOut(env,  0)) if (auto* b = sockIn(filt, 1)) nc.wires().connect(a, b);
-    if (auto* a = loop->outTick)    if (auto* b = timer->inReset)   nc.wires().connect(a, b);
+    reg.reg("Sequencer",  "Sequencer",  {120, 80, 160, 255},
+            [](Vec2 pos){ return std::make_unique<StepSeqNode>(pos); });
+    reg.reg("Timer",      "Timer",      {160, 60,  60, 255}, makeTimer);
+    reg.reg("Loop",       "Loop",       {60, 160,  90, 255}, makeLoop);
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -229,6 +145,11 @@ int main(int /*argc*/, char* /*argv*/[])
                 case SDL_EVENT_MOUSE_MOTION:
                     nc.onMouseMove(ev.motion.x, ev.motion.y,
                                    ev.motion.xrel, ev.motion.yrel);
+                    break;
+
+                case SDL_EVENT_MOUSE_WHEEL:
+                    if (!palette.contains(ev.wheel.mouse_x, ev.wheel.mouse_y))
+                        nc.onMouseWheel(ev.wheel.mouse_x, ev.wheel.mouse_y, ev.wheel.y);
                     break;
             }
         }
