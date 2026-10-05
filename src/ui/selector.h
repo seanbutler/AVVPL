@@ -1,5 +1,6 @@
 #pragma once
 #include "widget.h"
+#include "node_canvas.h"
 #include <functional>
 #include <string>
 #include <vector>
@@ -59,7 +60,7 @@ public:
                     Color4 tc = (i == selected) ? Color4{255,255,255,255}
                                                 : Color4{160,160,180,255};
                     t->fill(tc.r, tc.g, tc.b);
-                    t->translate(bx + 4.f, wp.y + kBtnH * 0.5f + 3.f);
+                    t->translate(bx + 4.f, wp.y + kBtnH * 0.5f - 2.f);
                     scene.push(std::move(t));
                 }
             }

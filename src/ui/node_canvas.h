@@ -30,6 +30,9 @@ public:
     static bool fontLoaded();
     static const std::string& fontName();
 
+    // Resize the canvas (call after the window resizes).
+    void resize(int w, int h);
+
     // Advance all node logic by dt seconds. Call once per frame before render().
     void tick(float dt);
 

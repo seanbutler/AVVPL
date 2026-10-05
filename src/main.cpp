@@ -13,26 +13,21 @@
 #include "ui/tone_node.h"
 #include "ui/wave_node.h"
 #include "ui/envelope_node.h"
+#include "ui/oscillator_node.h"
+#include "ui/number_node.h"
+#include "ui/waveform_node.h"
 
 #include <cmath>
 #include <cstdlib>
 #include <memory>
 
-static constexpr int W = 1280;
-static constexpr int H = 800;
+static int W = 1280;
+static int H = 800;
 
 // ── Node factory functions ────────────────────────────────────────────────────
 
 static std::unique_ptr<Node> makeOscillator(Vec2 pos) {
-    auto n = std::make_unique<Node>("Oscillator", pos);
-    n->addInput("Freq Mod");
-    n->addInput("Amp Mod");
-    auto* s = n->addWidget(std::make_unique<SliderWidget>("Freq", 20.f, 2000.f, 440.f));
-    n->addWidget(std::make_unique<DialWidget>("Amp", 0.f, 1.f, 0.7f));
-    n->addOutput("Audio");
-    n->addOutput("Phase");
-    (void)s;
-    return n;
+    return std::make_unique<OscillatorNode>(pos);
 }
 
 static std::unique_ptr<Node> makeFilter(Vec2 pos) {
@@ -91,16 +86,20 @@ static std::unique_ptr<Node> makeLoop(Vec2 pos) {
 static void registerNodes() {
     auto& reg = NodeRegistry::get();
     reg.reg("Oscillator", "Oscillator", {60,  80, 160, 255}, makeOscillator);
-    reg.reg("Filter",     "Filter",     {80, 120,  60, 255}, makeFilter);
+    reg.reg("Filter",     "Filter",     {80, 120,  60, 255}, makeFilter,  true);
     reg.reg("Envelope",   "Envelope",   {130, 80,  60, 255}, makeEnvelope);
-    reg.reg("Spectral",   "Spectral",   {80,  60, 140, 255}, makeSpectral);
-    reg.reg("Output",     "Output",     {60, 120, 120, 255}, makeOutput);
+    reg.reg("Spectral",   "Spectral",   {80,  60, 140, 255}, makeSpectral, true);
+    reg.reg("Output",     "Output",     {60, 120, 120, 255}, makeOutput,  true);
     reg.reg("Timer",      "Timer",      {160, 60,  60, 255}, makeTimer);
     reg.reg("Loop",       "Loop",       {60, 160,  90, 255}, makeLoop);
     reg.reg("Tone",       "Tone",       {160, 130, 40, 255},
             [](Vec2 pos){ return std::make_unique<ToneNode>(pos); });
     reg.reg("Wave",       "Wave",       {40,  130, 160, 255},
             [](Vec2 pos){ return std::make_unique<WaveNode>(pos); });
+    reg.reg("Number",     "Number",     {100, 100, 140, 255},
+            [](Vec2 pos){ return std::make_unique<NumberNode>(pos); });
+    reg.reg("Waveform",   "Waveform",   {100, 140, 100, 255},
+            [](Vec2 pos){ return std::make_unique<WaveformNode>(pos); });
 }
 
 // ── Build initial demo scene ──────────────────────────────────────────────────
@@ -157,7 +156,7 @@ int main(int /*argc*/, char* /*argv*/[])
         return EXIT_FAILURE;
     }
 
-    SDL_Window*   window   = SDL_CreateWindow("AVVPL — Node Graph", W, H, 0);
+    SDL_Window*   window   = SDL_CreateWindow("AVVPL — Node Graph", W, H, SDL_WINDOW_RESIZABLE);
     SDL_Renderer* renderer = window ? SDL_CreateRenderer(window, nullptr) : nullptr;
     if (!renderer) {
         SDL_Log("SDL_CreateRenderer: %s", SDL_GetError());
@@ -199,6 +198,15 @@ int main(int /*argc*/, char* /*argv*/[])
             switch (ev.type) {
                 case SDL_EVENT_QUIT:
                     running = false;
+                    break;
+
+                case SDL_EVENT_WINDOW_RESIZED:
+                    W = ev.window.data1;
+                    H = ev.window.data2;
+                    SDL_DestroyTexture(tex);
+                    tex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
+                                            SDL_TEXTUREACCESS_STREAMING, W, H);
+                    nc.resize(W, H);
                     break;
 
                 case SDL_EVENT_KEY_DOWN:

@@ -35,6 +35,7 @@ private:
         Color4      color;
         std::function<void()> action;
         bool isSeparator = false;
+        bool stub        = false;
     };
 
     std::vector<Button> buttons;

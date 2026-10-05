@@ -10,6 +10,7 @@ struct NodeTypeInfo {
     std::string label;
     Color4      color;   // palette button tint
     std::function<std::unique_ptr<Node>(Vec2)> create;
+    bool        stub = false;  // true = placeholder, no real processing
 };
 
 // Global registry: maps type-name string → NodeTypeInfo.
@@ -22,9 +23,10 @@ public:
     }
 
     void reg(std::string typeName, std::string label, Color4 color,
-             std::function<std::unique_ptr<Node>(Vec2)> fn) {
+             std::function<std::unique_ptr<Node>(Vec2)> fn,
+             bool stub = false) {
         order.push_back(typeName);
-        types[std::move(typeName)] = {std::move(label), color, std::move(fn)};
+        types[std::move(typeName)] = {std::move(label), color, std::move(fn), stub};
     }
 
     const NodeTypeInfo* find(const std::string& name) const {

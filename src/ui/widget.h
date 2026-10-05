@@ -29,7 +29,7 @@ public:
         return contains(worldPt) ? this : nullptr;
     }
 
-    void drawAll(tvg::Scene& scene) {
+    virtual void drawAll(tvg::Scene& scene) {
         if (!visible) return;
         draw(scene);
         for (auto& c : children) c->drawAll(scene);

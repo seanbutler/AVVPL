@@ -22,6 +22,12 @@ NodeCanvas::NodeCanvas(int w, int h) : cw(w), ch(h) {
     canvas->target(buf.data(), w, w, h, tvg::SwCanvas::Colorspace::ARGB8888S);
 }
 
+void NodeCanvas::resize(int w, int h) {
+    cw = w; ch = h;
+    buf.assign(w * h, 0);
+    canvas->target(buf.data(), w, w, h, tvg::SwCanvas::Colorspace::ARGB8888S);
+}
+
 // Clear trigger flags on output sockets only. Input triggers are overwritten
 // each frame by propagate(), so they naturally clear without explicit reset.
 static void clearTriggers(Widget* w) {

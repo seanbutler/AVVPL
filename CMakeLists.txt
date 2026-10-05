@@ -93,6 +93,7 @@ add_executable(${PROJECT_NAME}
   src/ui/graph_io.cpp
   src/ui/palette.cpp
   src/ui/tone_node.cpp
+  src/ui/oscillator_node.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE

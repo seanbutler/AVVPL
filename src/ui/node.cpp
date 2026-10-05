@@ -1,6 +1,31 @@
 #include "node.h"
 #include "node_canvas.h"
 
+void Node::drawAll(tvg::Scene& scene) {
+    if (!visible) return;
+    // Draw node body, then all children (body widgets paint over socket area).
+    draw(scene);
+    for (auto& c : children) c->drawAll(scene);
+    // Draw socket labels last so they always appear on top of body widgets.
+    if (!NodeCanvas::fontLoaded()) return;
+    for (auto& child : children) {
+        auto* s = dynamic_cast<SocketWidget*>(child.get());
+        if (!s || s->label.empty()) continue;
+        auto t = tvg::Text::gen();
+        if (t->font(NodeCanvas::fontName().c_str(), 9.f) != tvg::Result::Success) break;
+        t->text(s->label.c_str());
+        t->fill(150, 150, 170);
+        Vec2 c = s->worldCenter();
+        if (s->dir == SocketDir::Input) {
+            t->translate(c.x + SocketWidget::kR + 3.f, c.y - 2.f);
+        } else {
+            float labelW = s->label.size() * 5.5f;
+            t->translate(c.x - SocketWidget::kR - 3.f - labelW, c.y - 2.f);
+        }
+        scene.push(std::move(t));
+    }
+}
+
 SocketWidget* Node::addInput(std::string label) {
     auto s = std::make_unique<SocketWidget>(SocketDir::Input, sockInputCount, std::move(label));
     float y = kSockOffY + sockInputCount * kSockSpaceY;
@@ -49,29 +74,9 @@ void Node::draw(tvg::Scene& scene) {
         if (t->font(NodeCanvas::fontName().c_str(), 11.f) == tvg::Result::Success) {
             t->text(title.c_str());
             t->fill(220, 220, 235);
-            t->translate(wp.x + kPadX, wp.y + kTitleH * 0.5f + 4.f);
+            t->translate(wp.x + kPadX, wp.y + kTitleH * 0.5f - 2.f);
             scene.push(std::move(t));
         }
     }
 
-    // Socket labels
-    if (NodeCanvas::fontLoaded()) {
-        for (auto& child : children) {
-            auto* s = dynamic_cast<SocketWidget*>(child.get());
-            if (!s || s->label.empty()) continue;
-            auto t = tvg::Text::gen();
-            if (t->font(NodeCanvas::fontName().c_str(), 9.f) != tvg::Result::Success) break;
-            t->text(s->label.c_str());
-            t->fill(150, 150, 170);
-            Vec2 c = s->worldCenter();
-            if (s->dir == SocketDir::Input) {
-                t->translate(c.x + SocketWidget::kR + 3.f, c.y + 4.f);
-            } else {
-                // Approximate label width at 9pt (~5.5px per char) to right-align
-                float labelW = s->label.size() * 5.5f;
-                t->translate(c.x - SocketWidget::kR - 3.f - labelW, c.y + 4.f);
-            }
-            scene.push(std::move(t));
-        }
-    }
 }

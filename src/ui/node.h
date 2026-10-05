@@ -52,6 +52,9 @@ public:
     // read input socket values, update internal state, write output socket values.
     virtual void tick(float /*dt*/) {}
 
+    // Draw node body + children first, then socket labels on top.
+    void drawAll(tvg::Scene& scene) override;
+
     bool contains(Vec2 worldPt) const override {
         Vec2 wp = worldPos();
         return worldPt.x >= wp.x && worldPt.x <= wp.x + width
