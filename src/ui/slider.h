@@ -9,7 +9,7 @@ public:
     std::string label;
     std::function<void(float)> onChange;
 
-    static constexpr float kH       = 20.f;
+    static constexpr float kH       = 28.f;
     static constexpr float kTrackH  =  5.f;
     static constexpr float kThumbR  =  7.f;
     static constexpr float kPad     =  kThumbR + 2.f;

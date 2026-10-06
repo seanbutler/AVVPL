@@ -102,7 +102,7 @@ void Palette::drawButton(tvg::Scene& scene, int idx, bool hovered) const {
     scene.push(std::move(sh));
 
     // Label — baseline sits roughly at the vertical centre of the button.
-    pushText(scene, btn.label, bx + 8.f, by + kBtnH * 0.5f - 2.f, 11.f, {220, 220, 235, 255});
+    pushText(scene, btn.label, bx + 8.f, by + kBtnH * 0.5f - 5.f, 11.f, {220, 220, 235, 255});
 }
 
 void Palette::draw(tvg::Scene& scene) const {

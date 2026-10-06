@@ -2,7 +2,7 @@
 
 ## Audio DSP
 
-- [ ] Implement Oscillator node — sine/square/saw/tri at given frequency and amplitude
+- [x] Implement Oscillator node — sine/square/saw/tri/noise, Freq Mod + Amp Mod CV inputs
 - [ ] Implement Filter node — low-pass/high-pass with cutoff and resonance
 - [ ] Implement Output node — stereo mixer that routes to SDL audio device
 - [ ] Implement Spectral node — per-band frequency shaping
@@ -12,14 +12,20 @@
 ## Graph editing
 
 - [ ] Socket type system — Trigger / Float / Audio with colour coding and connection validation
-- [ ] Canvas pan and zoom (middle-mouse drag or scroll wheel)
+- [x] Canvas pan and zoom — middle mouse button
 - [ ] Select multiple nodes (rubber-band drag) and move/delete as a group
 - [ ] Duplicate node (e.g. Ctrl+D)
 - [ ] Undo/redo
 
 ## Sequencing
 
-- [ ] Sequencer node — steps through a list of values (frequencies/triggers) on each Tick
+- [x] Number node — scalar float output via slider
+- [x] Waveform node — discrete waveform type selector (Sine/Sqr/Saw/Tri/Noise)
+- [x] Sequencer node — 8-step lane, CV output scaled by Max slider, Trig output per step
+- [x] Tempo node — BPM slider, Swing dial, Tick (eighth note) and Beat (quarter note) outputs
+- [x] Clock Divider node — /1 /2 /4 /8 trigger outputs from a single master clock
+- [x] Pulse node — converts a trigger to a timed gate with Gate and Rel outputs
+- [x] Envelope node — ADSR with exponential decay/release, Gate and Rel inputs, up to 8s decay
 - [ ] Random node — outputs a random float on each trigger
 - [ ] Quantise node — snaps a float to the nearest musical note (CV → Hz)
 

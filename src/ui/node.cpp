@@ -17,10 +17,10 @@ void Node::drawAll(tvg::Scene& scene) {
         t->fill(150, 150, 170);
         Vec2 c = s->worldCenter();
         if (s->dir == SocketDir::Input) {
-            t->translate(c.x + SocketWidget::kR + 3.f, c.y - 2.f);
+            t->translate(c.x + SocketWidget::kR + 3.f, c.y - 5.f);
         } else {
             float labelW = s->label.size() * 5.5f;
-            t->translate(c.x - SocketWidget::kR - 3.f - labelW, c.y - 2.f);
+            t->translate(c.x - SocketWidget::kR - 3.f - labelW, c.y - 5.f);
         }
         scene.push(std::move(t));
     }
@@ -74,7 +74,7 @@ void Node::draw(tvg::Scene& scene) {
         if (t->font(NodeCanvas::fontName().c_str(), 11.f) == tvg::Result::Success) {
             t->text(title.c_str());
             t->fill(220, 220, 235);
-            t->translate(wp.x + kPadX, wp.y + kTitleH * 0.5f - 2.f);
+            t->translate(wp.x + kPadX, wp.y + kTitleH * 0.5f - 5.f);
             scene.push(std::move(t));
         }
     }

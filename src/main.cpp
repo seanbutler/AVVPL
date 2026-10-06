@@ -12,6 +12,9 @@
 #include "ui/envelope_node.h"
 #include "ui/number_node.h"
 #include "ui/waveform_node.h"
+#include "ui/pulse_node.h"
+#include "ui/clock_div_node.h"
+#include "ui/tempo_node.h"
 #include "ui/step_seq_node.h"
 
 #include <cmath>
@@ -49,6 +52,12 @@ static void registerNodes() {
             [](Vec2 pos){ return std::make_unique<NumberNode>(pos); });
     reg.reg("Waveform",   "Waveform",   {100, 140, 100, 255},
             [](Vec2 pos){ return std::make_unique<WaveformNode>(pos); });
+    reg.reg("Pulse",      "Pulse",      {160,  90, 160, 255},
+            [](Vec2 pos){ return std::make_unique<PulseNode>(pos); });
+    reg.reg("Clock Div",  "Clock Div",  {160, 160,  60, 255},
+            [](Vec2 pos){ return std::make_unique<ClockDivNode>(pos); });
+    reg.reg("Tempo",      "Tempo",      {60,  160, 160, 255},
+            [](Vec2 pos){ return std::make_unique<TempoNode>(pos); });
     reg.reg("Sequencer",  "Sequencer",  {120, 80, 160, 255},
             [](Vec2 pos){ return std::make_unique<StepSeqNode>(pos); });
     reg.reg("Timer",      "Timer",      {160, 60,  60, 255}, makeTimer);
