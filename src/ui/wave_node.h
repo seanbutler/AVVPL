@@ -16,7 +16,7 @@ public:
         freqSlider->onChange = [this](float v) { outFreq->value.f = v; };
 
         auto* sel = addWidget(std::make_unique<SelectorWidget>(
-            std::vector<std::string>{"Sine", "Sqr", "Saw", "Tri"}, 0));
+            std::vector<std::string>{"Sine", "Sqr", "Saw", "Tri", "Noise"}, 0));
         sel->onChange = [this](int i) { outWave->value.f = (float)i; };
 
         outFreq = addOutput("Freq");

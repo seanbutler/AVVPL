@@ -30,7 +30,8 @@ private:
     // Smoothed amplitude for the visual level ring (main thread only).
     float dispAmp = 0.f;
 
-    double phase = 0.0;
+    double   phase     = 0.0;
+    uint32_t noiseSeed = 22222;
 
     SDL_AudioStream* stream = nullptr;
 

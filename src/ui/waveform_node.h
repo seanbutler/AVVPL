@@ -3,7 +3,7 @@
 #include "socket.h"
 #include "selector.h"
 
-// WaveformNode — outputs a waveform type as a float (0=Sine 1=Sqr 2=Saw 3=Tri).
+// WaveformNode — outputs a waveform type as a float (0=Sine 1=Sqr 2=Saw 3=Tri 4=Noise).
 // Wire its output to a Tone Wave input.
 class WaveformNode final : public Node {
 public:
@@ -11,7 +11,7 @@ public:
 
     explicit WaveformNode(Vec2 pos = {}) : Node("Waveform", pos) {
         auto* sel = addWidget(std::make_unique<SelectorWidget>(
-            std::vector<std::string>{"Sine", "Sqr", "Saw", "Tri"}, 0));
+            std::vector<std::string>{"Sine", "Sqr", "Saw", "Tri", "Noise"}, 0));
         sel->onChange = [this](int i) { outWave->value.f = (float)i; };
 
         outWave = addOutput("Wave");

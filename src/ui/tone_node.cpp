@@ -78,6 +78,8 @@ void ToneNode::fillBuffer(float* out, int frames) {
             case 1:  s = phase < 0.5 ? 1.f : -1.f;                           break;
             case 2:  s = (float)(2.0 * phase - 1.0);                          break;
             case 3:  s = (float)(4.0 * std::abs(phase - 0.5) - 1.0);         break;
+            case 4:  noiseSeed = noiseSeed * 1664525u + 1013904223u;
+                     s = (float)(int32_t)noiseSeed / (float)0x80000000u;      break;
             default: s = (float)std::sin(phase * 2.0 * M_PI);                 break;
         }
         out[i] = s * a;

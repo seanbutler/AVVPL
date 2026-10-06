@@ -3,10 +3,11 @@
 #include "socket.h"
 #include "dial.h"
 #include "timer_node.h"
+#include <cmath>
 
 // EnvelopeNode — ADSR envelope triggered by a one-shot Gate trigger.
-// outCV outputs a 0-1 float each tick; wire it to a ToneNode Amp CV input.
-// With sustain=0 (default) the shape is attack → decay → idle, like a piano.
+// Decay and Release use exponential curves for a natural instrument feel.
+// With sustain=0 the shape is attack → exponential decay → idle (piano/cymbal).
 class EnvelopeNode final : public Node {
 public:
     SocketWidget* inGate    = nullptr;
@@ -17,10 +18,10 @@ public:
         inGate    = addInput("Gate");
         inRelease = addInput("Rel");
 
-        auto* aD = addWidget(std::make_unique<DialWidget>("Atk", 0.001f, 1.f,  0.01f));
-        auto* dD = addWidget(std::make_unique<DialWidget>("Dec", 0.01f,  2.f,  0.3f));
-        auto* sD = addWidget(std::make_unique<DialWidget>("Sus", 0.f,    1.f,  0.f));
-        auto* rD = addWidget(std::make_unique<DialWidget>("Rel", 0.01f,  1.f,  0.1f));
+        auto* aD = addWidget(std::make_unique<DialWidget>("Atk", 0.001f, 2.f,   0.01f));
+        auto* dD = addWidget(std::make_unique<DialWidget>("Dec", 0.01f,  8.f,   0.5f));
+        auto* sD = addWidget(std::make_unique<DialWidget>("Sus", 0.f,    1.f,   0.f));
+        auto* rD = addWidget(std::make_unique<DialWidget>("Rel", 0.01f,  8.f,   0.3f));
 
         aD->onChange = [this](float v){ attack  = v; };
         dD->onChange = [this](float v){ decay   = v; };
@@ -39,7 +40,6 @@ public:
             level = 0.f;
         }
         if (inRelease->value.trig && envPhase != Phase::Idle) {
-            releaseFrom = level;
             envPhase = Phase::Release;
         }
 
@@ -48,19 +48,30 @@ public:
                 level += dt / std::max(attack, 0.001f);
                 if (level >= 1.f) { level = 1.f; envPhase = Phase::Decay; }
                 break;
-            case Phase::Decay:
-                level -= dt / std::max(decay, 0.001f) * (1.f - sustain);
-                if (level <= sustain) {
+
+            case Phase::Decay: {
+                // Exponential decay: time constant = decay / 3 so level reaches
+                // ~5% of (peak - sustain) after one full decay period.
+                float tau = std::max(decay, 0.001f) / 3.f;
+                level = sustain + (level - sustain) * std::exp(-dt / tau);
+                if (level <= sustain + 0.001f) {
                     level = sustain;
-                    releaseFrom = sustain;
-                    envPhase = Phase::Release;
+                    envPhase = (sustain > 0.f) ? Phase::Sustain : Phase::Idle;
                 }
                 break;
-            case Phase::Release:
-                if (releaseFrom > 0.f)
-                    level -= dt / std::max(release, 0.001f) * releaseFrom;
-                if (level <= 0.f) { level = 0.f; envPhase = Phase::Idle; }
+            }
+
+            case Phase::Sustain:
+                level = sustain;
                 break;
+
+            case Phase::Release: {
+                float tau = std::max(release, 0.001f) / 3.f;
+                level *= std::exp(-dt / tau);
+                if (level < 0.001f) { level = 0.f; envPhase = Phase::Idle; }
+                break;
+            }
+
             case Phase::Idle:
                 break;
         }
@@ -69,12 +80,11 @@ public:
     }
 
 private:
-    enum class Phase { Idle, Attack, Decay, Release };
+    enum class Phase { Idle, Attack, Decay, Sustain, Release };
     Phase envPhase = Phase::Idle;
     float level   = 0.f;
-    float releaseFrom = 0.f;
     float attack  = 0.01f;
-    float decay   = 0.3f;
+    float decay   = 0.5f;
     float sustain = 0.f;
-    float release = 0.1f;
+    float release = 0.3f;
 };
