@@ -129,7 +129,7 @@ public:
 
         if (inTrig->value.trig) {
             step = (step + 1) % StepLaneWidget::kSteps;
-            outTrig->value.trig = true;
+            outTrig->value.trig = lane->values[step] > 0.01f;
         }
 
         lane->activeStep = step;

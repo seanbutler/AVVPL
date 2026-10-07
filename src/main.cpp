@@ -103,13 +103,15 @@ int main(int /*argc*/, char* /*argv*/[])
 
     bool   running  = true;
     SDL_Event ev;
-    Uint64 lastTick = SDL_GetTicksNS();
+    Uint64 lastTick  = SDL_GetTicksNS();
+    double accumulator = 0.0;
+    static constexpr double kFixedStep = 0.001; // 1ms logic tick
 
     while (running) {
         Uint64 now = SDL_GetTicksNS();
-        float  dt  = (float)((now - lastTick) * 1e-9);
+        double dt  = (now - lastTick) * 1e-9;
         lastTick   = now;
-        dt = std::min(dt, 0.1f);
+        if (dt > 0.1) dt = 0.1; // clamp runaway frames
 
         while (SDL_PollEvent(&ev)) {
             switch (ev.type) {
@@ -155,7 +157,14 @@ int main(int /*argc*/, char* /*argv*/[])
             }
         }
 
-        nc.tick(dt);
+        // Drain accumulated real time in fixed 1ms steps so timing nodes
+        // run at wall-clock speed regardless of render frame rate.
+        accumulator += dt;
+        while (accumulator >= kFixedStep) {
+            nc.tick((float)kFixedStep);
+            accumulator -= kFixedStep;
+        }
+
         nc.render();
 
         SDL_UpdateTexture(tex, nullptr, nc.pixels(), nc.canvasW() * sizeof(uint32_t));

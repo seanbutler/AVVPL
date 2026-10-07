@@ -245,7 +245,7 @@ void NodeCanvas::onMouseWheel(float x, float y, float delta) {
     Vec2  cursor = {x, y};
     Vec2  world  = screenToWorld(cursor);
     float factor = delta > 0.f ? 1.1f : 1.f / 1.1f;
-    camZoom = std::clamp(camZoom * factor, 0.1f, 8.f);
+    camZoom = std::clamp(camZoom * factor, 0.35f, 3.f);
     camPan.x = cursor.x - world.x * camZoom;
     camPan.y = cursor.y - world.y * camZoom;
 }
