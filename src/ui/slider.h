@@ -36,11 +36,9 @@ public:
         if (j.is_number()) value = clampf(j.get<float>(), min, max);
     }
 
+    // Returns a "nice" step size scaled to the slider's range.
+    float stepSize() const;
+
 private:
-    void setFromX(float worldX) {
-        Vec2 wp = worldPos();
-        float t = (worldX - (wp.x + kPad)) / (width - 2.f * kPad);
-        float v = min + clamp01(t) * (max - min);
-        if (v != value) { value = v; if (onChange) onChange(v); }
-    }
+    void setFromX(float worldX);
 };

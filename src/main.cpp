@@ -6,7 +6,6 @@
 #include "ui/node_registry.h"
 #include "ui/graph_io.h"
 #include "ui/palette.h"
-#include "ui/slider.h"
 #include "ui/timer_node.h"
 #include "ui/tone_node.h"
 #include "ui/envelope_node.h"
@@ -16,6 +15,8 @@
 #include "ui/clock_div_node.h"
 #include "ui/tempo_node.h"
 #include "ui/step_seq_node.h"
+#include "ui/scale_node.h"
+#include "ui/poly_node.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -24,21 +25,6 @@
 static int W = 1280;
 static int H = 800;
 
-// ── Node factory functions ────────────────────────────────────────────────────
-
-static std::unique_ptr<Node> makeTimer(Vec2 pos) {
-    auto n = std::make_unique<TimerNode>(pos);
-    auto* s = n->addWidget(std::make_unique<SliderWidget>("Duration", 0.5f, 8.f, 3.f));
-    s->onChange = [raw = n.get()](float v) { raw->inDuration->value.f = v; };
-    return n;
-}
-
-static std::unique_ptr<Node> makeLoop(Vec2 pos) {
-    auto n = std::make_unique<LoopTimerNode>(pos);
-    auto* s = n->addWidget(std::make_unique<SliderWidget>("Interval", 0.1f, 4.f, 1.f));
-    s->onChange = [raw = n.get()](float v) { raw->inInterval->value.f = v; };
-    return n;
-}
 
 // ── Register all node types ───────────────────────────────────────────────────
 
@@ -60,8 +46,14 @@ static void registerNodes() {
             [](Vec2 pos){ return std::make_unique<TempoNode>(pos); });
     reg.reg("Sequencer",  "Sequencer",  {120, 80, 160, 255},
             [](Vec2 pos){ return std::make_unique<StepSeqNode>(pos); });
-    reg.reg("Timer",      "Timer",      {160, 60,  60, 255}, makeTimer);
-    reg.reg("Loop",       "Loop",       {60, 160,  90, 255}, makeLoop);
+    reg.reg("Polygon",    "Polygon",    { 60, 120, 180, 255},
+            [](Vec2 pos){ return std::make_unique<PolyNode>(pos); });
+    reg.reg("Scale",      "Scale",      {140, 120, 180, 255},
+            [](Vec2 pos){ return std::make_unique<ScaleNode>(pos); });
+    reg.reg("Timer",      "Timer",      {160, 60,  60, 255},
+            [](Vec2 pos){ return std::make_unique<TimerNode>(pos); });
+    reg.reg("Loop",       "Loop",       {60, 160,  90, 255},
+            [](Vec2 pos){ return std::make_unique<LoopTimerNode>(pos); });
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────

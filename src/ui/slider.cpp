@@ -1,5 +1,6 @@
 #include "slider.h"
 #include "node_canvas.h"
+#include <SDL3/SDL.h>
 #include <cstdio>
 #include <cmath>
 
@@ -48,8 +49,35 @@ void SliderWidget::draw(tvg::Scene& scene) {
     if (fill > 0.f)
         pushRect(scene, tx, trackY, fill, kTrackH, 2.f, pal::SliderFill);
 
-    // Thumb
+    // Thumb — brighter when shift-snap is active
+    bool shifting = (SDL_GetModState() & SDL_KMOD_SHIFT) != 0;
+    Color4 thumbCol = shifting ? Color4{220, 240, 255, 255} : pal::SliderThumb;
     float thumbX = tx + norm() * tw;
     float thumbY = trackY + kTrackH * 0.5f;
-    pushCircle(scene, thumbX, thumbY, kThumbR, pal::SliderThumb, pal::NodeBorder, 1.f);
+    pushCircle(scene, thumbX, thumbY, kThumbR, thumbCol, pal::NodeBorder, 1.f);
+}
+
+float SliderWidget::stepSize() const {
+    float range = std::fabs(max - min);
+    if (range < 1e-6f) return 1.f;
+    float raw = range / 100.f;
+    float mag = std::pow(10.f, std::floor(std::log10(raw)));
+    float ratio = raw / mag;
+    if (ratio >= 5.f) return mag * 5.f;
+    if (ratio >= 2.f) return mag * 2.f;
+    return mag;
+}
+
+void SliderWidget::setFromX(float worldX) {
+    Vec2  wp = worldPos();
+    float t  = (worldX - (wp.x + kPad)) / (width - 2.f * kPad);
+    float v  = min + clamp01(t) * (max - min);
+
+    if (SDL_GetModState() & SDL_KMOD_SHIFT) {
+        float step = stepSize();
+        v = std::round(v / step) * step;
+    }
+
+    v = clampf(v, min, max);
+    if (v != value) { value = v; if (onChange) onChange(v); }
 }
