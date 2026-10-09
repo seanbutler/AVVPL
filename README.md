@@ -2,6 +2,12 @@
 
 A node graph editor for building audio signal chains, written in C++ with SDL3 and ThorVG.
 
+Its still very much a work in progress. Contributions from those interested in helping out are welcome and appreciated.
+
+
+![Screenshot_01.png](./Screenshot_01.png)
+
+
 ## Building
 
 Requires: CMake 3.25+, Ninja, Meson, a C++17 compiler.
