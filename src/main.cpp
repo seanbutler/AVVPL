@@ -15,6 +15,8 @@
 #include "ui/clock_div_node.h"
 #include "ui/tempo_node.h"
 #include "ui/step_seq_node.h"
+#include "ui/trig_seq_node.h"
+#include "ui/step_router_node.h"
 #include "ui/scale_node.h"
 #include "ui/poly_node.h"
 
@@ -44,8 +46,12 @@ static void registerNodes() {
             [](Vec2 pos){ return std::make_unique<ClockDivNode>(pos); });
     reg.reg("Tempo",      "Tempo",      {60,  160, 160, 255},
             [](Vec2 pos){ return std::make_unique<TempoNode>(pos); });
-    reg.reg("Sequencer",  "Sequencer",  {120, 80, 160, 255},
+    reg.reg("Sequencer CV",   "Sequencer CV",   {120, 80, 160, 255},
             [](Vec2 pos){ return std::make_unique<StepSeqNode>(pos); });
+    reg.reg("Sequencer Trig",   "Sequencer Trig",   { 80, 160, 100, 255},
+            [](Vec2 pos){ return std::make_unique<TrigSeqNode>(pos); });
+    reg.reg("Sequencer Router", "Sequencer Router", { 80, 130, 160, 255},
+            [](Vec2 pos){ return std::make_unique<StepRouterNode>(pos); });
     reg.reg("Polygon",    "Polygon",    { 60, 120, 180, 255},
             [](Vec2 pos){ return std::make_unique<PolyNode>(pos); });
     reg.reg("Scale",      "Scale",      {140, 120, 180, 255},

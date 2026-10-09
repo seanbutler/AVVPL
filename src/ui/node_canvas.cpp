@@ -96,21 +96,31 @@ void NodeCanvas::render() {
     {
         auto world = tvg::Scene::gen();
 
-        // Grid dots: compute visible world bounds to avoid drawing off-screen dots.
+        // Grid lines: single shape; step doubles until lines are >= 20px apart on screen.
         {
-            const float step = 24.f;
-            float wx0 = std::floor((            -camPan.x) / camZoom / step) * step;
-            float wy0 = std::floor((            -camPan.y) / camZoom / step) * step;
-            float wx1 =            ((float)cw  -camPan.x) / camZoom;
-            float wy1 =            ((float)ch  -camPan.y) / camZoom;
-            for (float gy = wy0; gy <= wy1; gy += step) {
-                for (float gx = wx0; gx <= wx1; gx += step) {
-                    auto dot = tvg::Shape::gen();
-                    dot->appendCircle(gx, gy, 1.f, 1.f);
-                    dot->fill(45, 45, 55, 110);
-                    world->push(std::move(dot));
-                }
+            const float baseStep = 64.f;
+            float screenStep = baseStep * camZoom;
+            while (screenStep < 48.f) screenStep *= 2.f;
+            float step = screenStep / camZoom;
+
+            float wx0 = std::floor((-camPan.x) / camZoom / step) * step;
+            float wy0 = std::floor((-camPan.y) / camZoom / step) * step;
+            float wx1 = ((float)cw - camPan.x) / camZoom;
+            float wy1 = ((float)ch - camPan.y) / camZoom;
+
+            auto grid = tvg::Shape::gen();
+            for (float gx = wx0; gx <= wx1; gx += step) {
+                grid->moveTo(gx, wy0);
+                grid->lineTo(gx, wy1);
             }
+            for (float gy = wy0; gy <= wy1; gy += step) {
+                grid->moveTo(wx0, gy);
+                grid->lineTo(wx1, gy);
+            }
+            grid->stroke(1.f);
+            grid->stroke(45, 45, 55, 60);
+            grid->fill(0, 0, 0, 0);
+            world->push(std::move(grid));
         }
 
         wireLayer.draw(*world);

@@ -11,7 +11,7 @@
 
 class StepLaneWidget final : public Widget {
 public:
-    static constexpr int   kSteps = 8;
+    static constexpr int   kSteps = 16;
     static constexpr float kH     = 64.f;
     static constexpr float kGap   =  2.f;
 
@@ -108,7 +108,7 @@ public:
     SocketWidget* outCV   = nullptr;
     SocketWidget* outTrig = nullptr;
 
-    explicit StepSeqNode(Vec2 pos = {}) : Node("Sequencer", pos) {
+    explicit StepSeqNode(Vec2 pos = {}) : Node("Sequencer CV", pos) {
         width = 220.f;
 
         inTrig  = addInput("Trig");
