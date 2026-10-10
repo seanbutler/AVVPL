@@ -26,8 +26,8 @@ void Node::drawAll(tvg::Scene& scene) {
     }
 }
 
-SocketWidget* Node::addInput(std::string label) {
-    auto s = std::make_unique<SocketWidget>(SocketDir::Input, sockInputCount, std::move(label));
+SocketWidget* Node::addInput(std::string label, SocketType type) {
+    auto s = std::make_unique<SocketWidget>(SocketDir::Input, sockInputCount, std::move(label), type);
     float y = kSockOffY + sockInputCount * kSockSpaceY;
     s->localPos = {-SocketWidget::kR, y};
     ++sockInputCount;
@@ -39,8 +39,8 @@ SocketWidget* Node::addInput(std::string label) {
     return raw;
 }
 
-SocketWidget* Node::addOutput(std::string label) {
-    auto s = std::make_unique<SocketWidget>(SocketDir::Output, sockOutputCount, std::move(label));
+SocketWidget* Node::addOutput(std::string label, SocketType type) {
+    auto s = std::make_unique<SocketWidget>(SocketDir::Output, sockOutputCount, std::move(label), type);
     float y = kSockOffY + sockOutputCount * kSockSpaceY;
     s->localPos = {width - SocketWidget::kR, y};
     ++sockOutputCount;

@@ -15,13 +15,13 @@ public:
     SocketWidget* outDiv8 = nullptr;
 
     explicit ClockDivNode(Vec2 pos = {}) : Node("Clock Div", pos) {
-        inTick  = addInput("Tick");
-        inReset = addInput("Reset");
+        inTick  = addInput("Tick",  SocketType::Trigger);
+        inReset = addInput("Reset", SocketType::Trigger);
 
-        outDiv1 = addOutput("/1");
-        outDiv2 = addOutput("/2");
-        outDiv4 = addOutput("/4");
-        outDiv8 = addOutput("/8");
+        outDiv1 = addOutput("/1", SocketType::Trigger);
+        outDiv2 = addOutput("/2", SocketType::Trigger);
+        outDiv4 = addOutput("/4", SocketType::Trigger);
+        outDiv8 = addOutput("/8", SocketType::Trigger);
     }
 
     void tick(float /*dt*/) override {

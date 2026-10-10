@@ -28,8 +28,8 @@ public:
     { localPos = pos; width = kMinWidth; height = kTitleH + kPadY; }
 
     // Add an input socket and return a raw pointer for wiring.
-    SocketWidget* addInput (std::string label);
-    SocketWidget* addOutput(std::string label);
+    SocketWidget* addInput (std::string label, SocketType type = SocketType::CV);
+    SocketWidget* addOutput(std::string label, SocketType type = SocketType::CV);
 
     // Add a body widget; adjusts height automatically.
     // Returns raw pointer for setting callbacks.

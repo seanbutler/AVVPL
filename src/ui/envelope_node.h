@@ -15,23 +15,47 @@ public:
     SocketWidget* outCV     = nullptr;
 
     explicit EnvelopeNode(Vec2 pos = {}) : Node("Envelope", pos) {
-        inGate    = addInput("Gate");
-        inRelease = addInput("Rel");
+        inGate    = addInput("Gate", SocketType::Trigger);
+        inRelease = addInput("Rel",  SocketType::Trigger);
 
-        auto* aD = addWidget(std::make_unique<DialWidget>("Atk", 0.001f, 2.f,   0.01f));
-        auto* dD = addWidget(std::make_unique<DialWidget>("Dec", 0.01f,  8.f,   0.5f));
-        auto* sD = addWidget(std::make_unique<DialWidget>("Sus", 0.f,    1.f,   0.f));
-        auto* rD = addWidget(std::make_unique<DialWidget>("Rel", 0.01f,  8.f,   0.3f));
+
+        // 2×2 dial grid: two 80px columns inside the 160px body.
+        // Each 60px dial is centred in its column.
+        static constexpr float kColW     = (kMinWidth - 2.f * kPadX) * 0.5f;
+        static constexpr float kDialOffX = (kColW - DialWidget::kSize) * 0.5f;
+        float x1 = kPadX + kDialOffX;
+        float x2 = kPadX + kColW + kDialOffX;
+        float y1 = height;
+        float y2 = y1 + DialWidget::kSize + kPadY;
+
+        auto place = [this](std::string lbl, float mn, float mx, float v, float x, float y) {
+            auto d = std::make_unique<DialWidget>(std::move(lbl), mn, mx, v);
+            d->localPos = {x, y};
+            auto* raw = d.get();
+            addChild(std::move(d));
+            return raw;
+        };
+
+        auto* aD = place("Atk", 0.001f, 2.f,  0.01f, x1, y1);
+        auto* dD = place("Dec", 0.01f,  8.f,  0.5f,  x2, y1);
+        auto* sD = place("Sus", 0.f,    1.f,  0.f,   x1, y2);
+        auto* rD = place("Rel", 0.01f,  8.f,  0.3f,  x2, y2);
+
+        height = y2 + DialWidget::kSize + kPadY;
 
         aD->onChange = [this](float v){ attack  = v; };
         dD->onChange = [this](float v){ decay   = v; };
         sD->onChange = [this](float v){ sustain = v; };
         rD->onChange = [this](float v){ release = v; };
 
-        auto* ring = addWidget(std::make_unique<ProgressRingWidget>([this]{ return level; }));
-        ring->arcColor = pal::SliderFill;
+        // Ring centred below the grid
+        auto rw = std::make_unique<ProgressRingWidget>([this]{ return level; });
+        rw->arcColor = pal::SliderFill;
+        rw->localPos = {(kMinWidth - ProgressRingWidget::kSize) * 0.5f, height};
+        height      += ProgressRingWidget::kSize + kPadY;
+        addChild(std::move(rw));
 
-        outCV = addOutput("CV Out");
+        outCV = addOutput("CV Out", SocketType::CV);
     }
 
     void tick(float dt) override {

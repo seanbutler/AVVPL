@@ -53,13 +53,13 @@ public:
     explicit StepRouterNode(Vec2 pos = {}) : Node("Sequencer Router", pos) {
         width = 200.f;
 
-        inTrig  = addInput("Trig");
-        inReset = addInput("Reset");
+        inTrig  = addInput("Trig",  SocketType::Trigger);
+        inReset = addInput("Reset", SocketType::Trigger);
 
         indicator = addWidget(std::make_unique<StepIndicatorWidget>());
 
         for (int i = 0; i < kSteps; ++i)
-            outTrig[i] = addOutput(std::to_string(i + 1));
+            outTrig[i] = addOutput(std::to_string(i + 1), SocketType::Trigger);
     }
 
     void tick(float /*dt*/) override {

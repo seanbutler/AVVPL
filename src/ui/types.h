@@ -21,6 +21,8 @@ struct Value {
     bool  trig = false;
 };
 
+enum class SocketType { CV, Audio, Trigger };
+
 namespace pal {
     inline constexpr Color4 NodeBg      {28,  28,  36,  235};
     inline constexpr Color4 NodeBorder  {55,  55,  72,  255};
@@ -34,8 +36,11 @@ namespace pal {
     inline constexpr Color4 DialKnob    {70,  70,  88,  255};
     inline constexpr Color4 HistBar     {70, 170, 110,  210};
     inline constexpr Color4 HistBarHot  {110,220, 155,  240};
-    inline constexpr Color4 SockIn      {70, 200, 150,  255};
-    inline constexpr Color4 SockOut     {210,110,  70,  255};
+    inline constexpr Color4 SockIn      {70, 200, 150,  255};   // legacy
+    inline constexpr Color4 SockOut     {210,110,  70,  255};   // legacy
+    inline constexpr Color4 SockCV      {220, 180,  50,  255};  // golden yellow
+    inline constexpr Color4 SockAudio   { 60, 160, 240,  255};  // blue
+    inline constexpr Color4 SockTrigger {220,  70,  90,  255};  // red
     inline constexpr Color4 WireColor   {190,165,  55,  210};
     inline constexpr Color4 WireDraft   {200,200, 200,  120};
     inline constexpr Color4 CanvasBg    { 18,  18,  22,  255};

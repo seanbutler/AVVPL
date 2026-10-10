@@ -86,14 +86,14 @@ public:
     SocketWidget* outTrig = nullptr;
 
     explicit TrigSeqNode(Vec2 pos = {}) : Node("Sequencer Trig", pos) {
-        width = 220.f;
+        width = 390.f;
 
-        inTrig  = addInput("Trig");
-        inReset = addInput("Reset");
+        inTrig  = addInput("Trig",  SocketType::Trigger);
+        inReset = addInput("Reset", SocketType::Trigger);
 
         lane = addWidget(std::make_unique<GateLaneWidget>());
 
-        outTrig = addOutput("Trig");
+        outTrig = addOutput("Trig", SocketType::Trigger);
     }
 
     void tick(float /*dt*/) override {

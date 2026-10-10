@@ -14,7 +14,7 @@ public:
             std::vector<std::string>{"Sine", "Sqr", "Saw", "Tri", "Noise"}, 0));
         sel->onChange = [this](int i) { outWave->value.f = (float)i; };
 
-        outWave = addOutput("Wave");
+        outWave = addOutput("Wave", SocketType::CV);
         outWave->value.f = 0.f;
     }
 

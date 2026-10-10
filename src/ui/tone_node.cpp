@@ -14,10 +14,10 @@ void ToneNode::mixRecent(float* dst, int n) const {
 }
 
 ToneNode::ToneNode(Vec2 pos) : Node("Tone", pos) {
-    inFreq  = addInput("Freq");
-    inWave  = addInput("Wave");
-    inAmp   = addInput("Amp");
-    inAmpCV = addInput("Amp CV");
+    inFreq  = addInput("Freq",   SocketType::CV);
+    inWave  = addInput("Wave",   SocketType::CV);
+    inAmp   = addInput("Amp",    SocketType::CV);
+    inAmpCV = addInput("Amp CV", SocketType::CV);
 
     inFreq->value.f  = 440.f;
     inWave->value.f  = 0.f;
@@ -30,7 +30,7 @@ ToneNode::ToneNode(Vec2 pos) : Node("Tone", pos) {
     auto* ring = addWidget(std::make_unique<ProgressRingWidget>([this]{ return dispAmp; }));
     ring->arcColor = pal::SockOut;
 
-    outAudio = addOutput("Audio");
+    outAudio = addOutput("Audio", SocketType::Audio);
 
     for (auto& t : tap) t.store(0.f, std::memory_order_relaxed);
     gToneNodes.push_back(this);

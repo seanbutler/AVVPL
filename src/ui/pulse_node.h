@@ -15,7 +15,7 @@ public:
     SocketWidget* outRel   = nullptr;  // trigger: fires when gate closes
 
     explicit PulseNode(Vec2 pos = {}) : Node("Pulse", pos) {
-        inTick = addInput("Tick");
+        inTick = addInput("Tick", SocketType::Trigger);
 
         auto* d = addWidget(std::make_unique<DialWidget>("Dur", 0.01f, 4.f, 0.25f));
         d->onChange = [this](float v){ duration = v; };
@@ -24,8 +24,8 @@ public:
             return remaining > 0.f ? remaining / std::max(duration, 0.001f) : 0.f;
         }));
 
-        outGate = addOutput("Gate");
-        outRel  = addOutput("Rel");
+        outGate = addOutput("Gate", SocketType::Trigger);
+        outRel  = addOutput("Rel",  SocketType::Trigger);
     }
 
     void tick(float dt) override {

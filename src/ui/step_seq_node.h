@@ -109,18 +109,18 @@ public:
     SocketWidget* outTrig = nullptr;
 
     explicit StepSeqNode(Vec2 pos = {}) : Node("Sequencer CV", pos) {
-        width = 220.f;
+        width = 390.f;
 
-        inTrig  = addInput("Trig");
-        inReset = addInput("Reset");
+        inTrig  = addInput("Trig",  SocketType::Trigger);
+        inReset = addInput("Reset", SocketType::Trigger);
 
         lane = addWidget(std::make_unique<StepLaneWidget>());
 
         auto* maxSlider = addWidget(std::make_unique<SliderWidget>("Max", 1.f, 2000.f, 440.f));
         maxSlider->onChange = [this](float v) { maxVal = v; };
 
-        outCV   = addOutput("CV");
-        outTrig = addOutput("Trig");
+        outCV   = addOutput("CV",   SocketType::CV);
+        outTrig = addOutput("Trig", SocketType::Trigger);
     }
 
     void tick(float /*dt*/) override {

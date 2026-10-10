@@ -17,8 +17,10 @@ public:
     Value value;
     bool  connected = false;  // true when an incoming wire targets this input socket
 
-    SocketWidget(SocketDir d, int idx, std::string lbl)
-        : dir(d), index(idx), label(std::move(lbl))
+    SocketType  type  = SocketType::CV;
+
+    SocketWidget(SocketDir d, int idx, std::string lbl, SocketType t = SocketType::CV)
+        : dir(d), index(idx), label(std::move(lbl)), type(t)
     { width = height = kR * 2.f; }
 
     Vec2 worldCenter() const {
@@ -39,7 +41,9 @@ public:
 
     void draw(tvg::Scene& scene) override {
         Vec2 c = worldCenter();
-        Color4 fill = (dir == SocketDir::Input) ? pal::SockIn : pal::SockOut;
+        Color4 fill = type == SocketType::Audio   ? pal::SockAudio
+                    : type == SocketType::Trigger  ? pal::SockTrigger
+                    :                                pal::SockCV;
         pushCircle(scene, c.x, c.y, kR,          fill,          pal::NodeBorder, 1.5f);
         pushCircle(scene, c.x, c.y, kR * 0.35f,  {255,255,255,180});
     }

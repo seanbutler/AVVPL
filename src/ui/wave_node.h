@@ -19,8 +19,8 @@ public:
             std::vector<std::string>{"Sine", "Sqr", "Saw", "Tri", "Noise"}, 0));
         sel->onChange = [this](int i) { outWave->value.f = (float)i; };
 
-        outFreq = addOutput("Freq");
-        outWave = addOutput("Wave");
+        outFreq = addOutput("Freq", SocketType::CV);
+        outWave = addOutput("Wave", SocketType::CV);
 
         outFreq->value.f = 440.f;
         outWave->value.f = 0.f;

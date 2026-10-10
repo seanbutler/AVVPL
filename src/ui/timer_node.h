@@ -59,8 +59,8 @@ public:
     SocketWidget* outTime    = nullptr;
 
     explicit TimerNode(Vec2 pos = {}) : Node("Timer", pos) {
-        inDuration = addInput("Duration");
-        inReset    = addInput("Reset");
+        inDuration = addInput("Duration", SocketType::CV);
+        inReset    = addInput("Reset",    SocketType::Trigger);
 
         inDuration->value.f = 2.f;
         remaining            = inDuration->value.f;  // for the ring until the first tick arms it
@@ -71,8 +71,8 @@ public:
         }));
         ring->arcColor = {200, 80, 70, 255};
 
-        outDone = addOutput("Done");
-        outTime = addOutput("Time");
+        outDone = addOutput("Done", SocketType::Trigger);
+        outTime = addOutput("Time", SocketType::CV);
     }
 
     void tick(float dt) override {
@@ -118,8 +118,8 @@ public:
     SocketWidget* outCount   = nullptr;
 
     explicit LoopTimerNode(Vec2 pos = {}) : Node("Loop", pos) {
-        inInterval = addInput("Interval");
-        inReset    = addInput("Reset");
+        inInterval = addInput("Interval", SocketType::CV);
+        inReset    = addInput("Reset",    SocketType::Trigger);
 
         inInterval->value.f = 1.f;
 
@@ -128,9 +128,9 @@ public:
         }));
         ring->arcColor = pal::DialArc;
 
-        outTick  = addOutput("Tick");
-        outPhase = addOutput("Phase");
-        outCount = addOutput("Count");
+        outTick  = addOutput("Tick",  SocketType::Trigger);
+        outPhase = addOutput("Phase", SocketType::CV);
+        outCount = addOutput("Count", SocketType::CV);
     }
 
     void tick(float dt) override {
