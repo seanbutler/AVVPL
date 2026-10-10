@@ -60,9 +60,16 @@ void WireLayer::connect(SocketWidget* from, SocketWidget* to) {
     if (to->onConnect) to->onConnect();
 }
 
+// An input that loses its wire stops being refreshed by propagate(), so clear its
+// connected flag and any trigger it was last handed — otherwise the trigger sticks.
+static void detachInput(SocketWidget* in) {
+    in->connected  = false;
+    in->value.trig = false;
+}
+
 void WireLayer::disconnectSocket(SocketWidget* sock) {
     for (auto& w : wires)
-        if (w.to == sock) w.to->connected = false;
+        if (w.from == sock || w.to == sock) detachInput(w.to);
     wires.erase(std::remove_if(wires.begin(), wires.end(),
         [sock](const Wire& w){ return w.from == sock || w.to == sock; }), wires.end());
 }
@@ -97,6 +104,12 @@ int WireLayer::wireAt(Vec2 pt, float threshold) const {
         }
     }
     return best;
+}
+
+void WireLayer::removeWire(int idx) {
+    if (idx < 0 || idx >= (int)wires.size()) return;
+    detachInput(wires[idx].to);
+    wires.erase(wires.begin() + idx);
 }
 
 void WireLayer::propagate() {

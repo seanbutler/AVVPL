@@ -63,7 +63,7 @@ public:
         inReset    = addInput("Reset");
 
         inDuration->value.f = 2.f;
-        remaining            = inDuration->value.f;
+        remaining            = inDuration->value.f;  // for the ring until the first tick arms it
 
         ring = addWidget(std::make_unique<ProgressRingWidget>([this] {
             float dur = std::max(inDuration->value.f, 0.001f);
@@ -78,9 +78,10 @@ public:
     void tick(float dt) override {
         float dur = std::max(inDuration->value.f, 0.001f);
 
-        if (inReset->value.trig) {
+        if (!armed || inReset->value.trig) {
             remaining = dur;
             fired     = false;
+            armed     = true;
         }
 
         outDone->value.trig = false;
@@ -101,6 +102,7 @@ private:
     ProgressRingWidget* ring      = nullptr;
     float               remaining = 2.f;
     bool                fired     = false;
+    bool                armed     = false;  // countdown loaded from Duration on first tick
 };
 
 // ── LoopTimerNode ─────────────────────────────────────────────────────────────

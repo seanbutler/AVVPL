@@ -175,10 +175,7 @@ void NodeCanvas::onMouseDown(float x, float y, int btn) {
             }
         } else {
             int idx = wireLayer.wireAt(pt);
-            if (idx >= 0) {
-                wireLayer.wires[idx].to->connected = false;
-                wireLayer.wires.erase(wireLayer.wires.begin() + idx);
-            }
+            if (idx >= 0) wireLayer.removeWire(idx);
         }
         return;
     }

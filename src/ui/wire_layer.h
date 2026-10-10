@@ -28,6 +28,7 @@ public:
 
     void connect         (SocketWidget* from, SocketWidget* to);
     void disconnectSocket(SocketWidget* sock);
+    void removeWire      (int idx);
 
     // Returns index into wires[] of the wire nearest to pt, or -1 if none within threshold.
     int  wireAt(Vec2 pt, float threshold = 6.f) const;
