@@ -1,6 +1,17 @@
 #include "tone_node.h"
 #include "dial.h"
+#include <algorithm>
 #include <cmath>
+
+static std::vector<ToneNode*> gToneNodes;
+
+const std::vector<ToneNode*>& ToneNode::instances() { return gToneNodes; }
+
+void ToneNode::mixRecent(float* dst, int n) const {
+    uint32_t w = tapWrite.load(std::memory_order_acquire);
+    for (int i = 0; i < n; ++i)
+        dst[i] += tap[(w - n + i) & (kTapSize - 1)].load(std::memory_order_relaxed);
+}
 
 ToneNode::ToneNode(Vec2 pos) : Node("Tone", pos) {
     inFreq  = addInput("Freq");
@@ -21,6 +32,9 @@ ToneNode::ToneNode(Vec2 pos) : Node("Tone", pos) {
 
     outAudio = addOutput("Audio");
 
+    for (auto& t : tap) t.store(0.f, std::memory_order_relaxed);
+    gToneNodes.push_back(this);
+
     SDL_AudioSpec spec;
     SDL_zero(spec);
     spec.format   = SDL_AUDIO_F32;
@@ -37,6 +51,7 @@ ToneNode::~ToneNode() {
         SDL_PauseAudioStreamDevice(stream);
         SDL_DestroyAudioStream(stream);
     }
+    gToneNodes.erase(std::remove(gToneNodes.begin(), gToneNodes.end(), this), gToneNodes.end());
 }
 
 void ToneNode::tick(float /*dt*/) {
@@ -71,6 +86,7 @@ void ToneNode::fillBuffer(float* out, int frames) {
 
     if (f < 1.f) f = 1.f;
     double inc = (double)f / kSampleRate;
+    uint32_t w = tapWrite.load(std::memory_order_relaxed);
 
     for (int i = 0; i < frames; ++i) {
         float s;
@@ -83,7 +99,9 @@ void ToneNode::fillBuffer(float* out, int frames) {
             default: s = (float)std::sin(phase * 2.0 * M_PI);                 break;
         }
         out[i] = s * a;
+        tap[(w + i) & (kTapSize - 1)].store(out[i], std::memory_order_relaxed);
         phase += inc;
         if (phase >= 1.0) phase -= 1.0;
     }
+    tapWrite.store(w + (uint32_t)frames, std::memory_order_release);
 }

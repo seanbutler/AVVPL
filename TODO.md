@@ -69,6 +69,7 @@
 - [ ] Highlight compatible sockets while dragging a wire
 - [ ] Show wire value on hover
 - [ ] Dark/light theme toggle
+- [ ] Separate visual style into a JSON style doc — move `pal::` colours, sizes and font settings out of code into a loadable file (prerequisite for theming)
 
 ## Infrastructure
 

@@ -19,6 +19,7 @@
 #include "ui/step_router_node.h"
 #include "ui/scale_node.h"
 #include "ui/poly_node.h"
+#include "ui/scope_node.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -34,6 +35,8 @@ static void registerNodes() {
     auto& reg = NodeRegistry::get();
     reg.reg("Tone",       "Tone",       {160, 130, 40, 255},
             [](Vec2 pos){ return std::make_unique<ToneNode>(pos); });
+    reg.reg("Scope",      "Scope",      { 60, 100, 150, 255},
+            [](Vec2 pos){ return std::make_unique<ScopeNode>(pos); });
     reg.reg("Envelope",   "Envelope",   {130, 80,  60, 255},
             [](Vec2 pos){ return std::make_unique<EnvelopeNode>(pos); });
     reg.reg("Number",     "Number",     {100, 100, 140, 255},

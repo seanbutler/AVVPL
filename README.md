@@ -43,6 +43,7 @@ Dependencies are fetched automatically: SDL3, ThorVG (built via Meson), nlohmann
 |---|---|
 | **Tone** | Synthesises audio from Freq, Waveform, Amp, and Detune inputs via SDL audio |
 | **Waveform** | Discrete waveform type selector (Sine / Square / Saw / Triangle / Noise) |
+| **Scope** | Oscilloscope of the graph's audio output: the summed signal of every Tone node, red when clipping. Time slider sets the span (1–90 ms) |
 | **Envelope** | ADSR envelope — outputs a 0–1 CV curve on each Gate trigger |
 
 ### Clocking & Timing
