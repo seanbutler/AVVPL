@@ -40,7 +40,7 @@ public:
 // ── StepRouterNode ────────────────────────────────────────────────────────────
 // Advances one step per Trig input. Each step has its own Trig output that
 // fires when the sequencer lands on that step.
-// Reset input returns to step 0 without firing any output.
+// Reset input rewinds so the next Trig plays step 0; it does not fire any output.
 
 class StepRouterNode final : public Node {
 public:
@@ -63,15 +63,18 @@ public:
     }
 
     void tick(float /*dt*/) override {
-        if (inReset->value.trig)
-            step = 0;
+        if (inReset->value.trig) {
+            step    = 0;
+            atStart = true;
+        }
 
         // Clear all outputs first
         for (int i = 0; i < kSteps; ++i)
             outTrig[i]->value.trig = false;
 
         if (inTrig->value.trig) {
-            step = (step + 1) % kSteps;
+            if (atStart) atStart = false;            // first Trig plays step 0
+            else         step = (step + 1) % kSteps;
             outTrig[step]->value.trig = true;
         }
 
@@ -81,4 +84,5 @@ public:
 private:
     StepIndicatorWidget* indicator = nullptr;
     int                  step      = 0;
+    bool atStart = true;  // next Trig plays step 0 rather than advancing
 };

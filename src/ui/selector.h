@@ -71,6 +71,7 @@ public:
     void fromJson(const nlohmann::json& j) override {
         if (j.is_number_integer()) {
             selected = std::max(0, std::min((int)options.size()-1, j.get<int>()));
+            if (onChange) onChange(selected);
         }
     }
 };

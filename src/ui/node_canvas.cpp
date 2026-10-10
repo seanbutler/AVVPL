@@ -97,7 +97,7 @@ void NodeCanvas::render() {
         auto world = tvg::Scene::gen();
 
         // Grid lines: single shape; step doubles until lines are >= 20px apart on screen.
-        {
+        if (showGrid) {
             const float baseStep = 64.f;
             float screenStep = baseStep * camZoom;
             while (screenStep < 48.f) screenStep *= 2.f;

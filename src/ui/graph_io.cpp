@@ -25,11 +25,14 @@ static std::vector<SocketWidget*> nodeSockets(Node* n) {
     return out;
 }
 
-// Collect all value widgets (non-socket children) in order.
+// Collect all value widgets (non-socket children that serialise something) in order.
+// Display-only widgets (toJson() == null) are excluded so save and load index the
+// same list — otherwise a display before a slider shifts every value by one.
 static std::vector<Widget*> nodeWidgets(Node* n) {
     std::vector<Widget*> out;
     for (auto& c : n->children)
-        if (!dynamic_cast<SocketWidget*>(c.get())) out.push_back(c.get());
+        if (!dynamic_cast<SocketWidget*>(c.get()) && !c->toJson().is_null())
+            out.push_back(c.get());
     return out;
 }
 
@@ -56,10 +59,8 @@ bool graphSave(const NodeCanvas& nc, const std::string& path) {
 
         // Value widget states (sliders, dials, histograms, ProgressRing ignored)
         json jwidgets = json::array();
-        for (auto* w : nodeWidgets(n)) {
-            json jw = w->toJson();
-            if (!jw.is_null()) jwidgets.push_back(jw);
-        }
+        for (auto* w : nodeWidgets(n))
+            jwidgets.push_back(w->toJson());
         jn["widgets"] = jwidgets;
 
         jnodes.push_back(jn);
@@ -128,7 +129,7 @@ bool graphLoad(NodeCanvas& nc, const std::string& path) {
             }
         }
 
-        // Restore widget values (in order, skipping null entries)
+        // Restore widget values (in order)
         if (jn.contains("widgets")) {
             auto wgets = nodeWidgets(n);
             size_t wi  = 0;

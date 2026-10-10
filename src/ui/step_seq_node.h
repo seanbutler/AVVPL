@@ -99,7 +99,7 @@ private:
 
 // ── StepSeqNode ───────────────────────────────────────────────────────────────
 // Advances one step per Trig input. CV output = step value * Max slider.
-// Reset input returns to step 0 without firing outTrig.
+// Reset input rewinds so the next Trig plays step 0; it does not fire outTrig.
 
 class StepSeqNode final : public Node {
 public:
@@ -124,11 +124,14 @@ public:
     }
 
     void tick(float /*dt*/) override {
-        if (inReset->value.trig)
-            step = 0;
+        if (inReset->value.trig) {
+            step    = 0;
+            atStart = true;
+        }
 
         if (inTrig->value.trig) {
-            step = (step + 1) % StepLaneWidget::kSteps;
+            if (atStart) atStart = false;            // first Trig plays step 0
+            else         step = (step + 1) % StepLaneWidget::kSteps;
             outTrig->value.trig = lane->values[step] > 0.01f;
         }
 
@@ -139,5 +142,6 @@ public:
 private:
     StepLaneWidget* lane   = nullptr;
     int             step   = 0;
+    bool atStart = true;  // next Trig plays step 0 rather than advancing
     float           maxVal = 440.f;
 };

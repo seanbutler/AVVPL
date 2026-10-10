@@ -12,6 +12,7 @@ class Node : public Widget {
 public:
     std::string title;
     bool        selected = false;
+    Color4      accent   {0, 0, 0, 0};  // category colour stripe under the title; set by NodeRegistry
 
     static constexpr float kCornerR    =  8.f;
     static constexpr float kTitleH     = 24.f;
@@ -20,6 +21,7 @@ public:
     static constexpr float kSockSpaceY = 22.f;  // vertical gap between sockets
     static constexpr float kSockOffY   = kTitleH + 10.f;  // first socket Y offset
     static constexpr float kMinWidth   = 180.f;
+    static constexpr float kAccentH    =  3.f;   // category stripe height
 
     explicit Node(std::string t, Vec2 pos = {})
         : title(std::move(t))

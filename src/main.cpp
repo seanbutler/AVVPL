@@ -10,6 +10,7 @@
 #include "ui/tone_node.h"
 #include "ui/envelope_node.h"
 #include "ui/number_node.h"
+#include "ui/button_node.h"
 #include "ui/waveform_node.h"
 #include "ui/pulse_node.h"
 #include "ui/clock_div_node.h"
@@ -33,36 +34,49 @@ static int H = 800;
 
 static void registerNodes() {
     auto& reg = NodeRegistry::get();
-    reg.reg("Tone",       "Tone",       {160, 130, 40, 255},
+    using C = NodeCategory;
+
+    // Sound
+    reg.reg("Tone",       "Tone",       C::Sound,
             [](Vec2 pos){ return std::make_unique<ToneNode>(pos); });
-    reg.reg("Scope",      "Scope",      { 60, 100, 150, 255},
-            [](Vec2 pos){ return std::make_unique<ScopeNode>(pos); });
-    reg.reg("Envelope",   "Envelope",   {130, 80,  60, 255},
+    reg.reg("Envelope",   "Envelope",   C::Sound,
             [](Vec2 pos){ return std::make_unique<EnvelopeNode>(pos); });
-    reg.reg("Number",     "Number",     {100, 100, 140, 255},
-            [](Vec2 pos){ return std::make_unique<NumberNode>(pos); });
-    reg.reg("Waveform",   "Waveform",   {100, 140, 100, 255},
+    reg.reg("Waveform",   "Waveform",   C::Sound,
             [](Vec2 pos){ return std::make_unique<WaveformNode>(pos); });
-    reg.reg("Pulse",      "Pulse",      {160,  90, 160, 255},
-            [](Vec2 pos){ return std::make_unique<PulseNode>(pos); });
-    reg.reg("Clock Div",  "Clock Div",  {160, 160,  60, 255},
-            [](Vec2 pos){ return std::make_unique<ClockDivNode>(pos); });
-    reg.reg("Tempo",      "Tempo",      {60,  160, 160, 255},
+
+    // Timing
+    reg.reg("Tempo",      "Tempo",      C::Timing,
             [](Vec2 pos){ return std::make_unique<TempoNode>(pos); });
-    reg.reg("Sequencer CV",   "Sequencer CV",   {120, 80, 160, 255},
-            [](Vec2 pos){ return std::make_unique<StepSeqNode>(pos); });
-    reg.reg("Sequencer Trig",   "Sequencer Trig",   { 80, 160, 100, 255},
-            [](Vec2 pos){ return std::make_unique<TrigSeqNode>(pos); });
-    reg.reg("Sequencer Router", "Sequencer Router", { 80, 130, 160, 255},
-            [](Vec2 pos){ return std::make_unique<StepRouterNode>(pos); });
-    reg.reg("Polygon",    "Polygon",    { 60, 120, 180, 255},
-            [](Vec2 pos){ return std::make_unique<PolyNode>(pos); });
-    reg.reg("Scale",      "Scale",      {140, 120, 180, 255},
-            [](Vec2 pos){ return std::make_unique<ScaleNode>(pos); });
-    reg.reg("Timer",      "Timer",      {160, 60,  60, 255},
-            [](Vec2 pos){ return std::make_unique<TimerNode>(pos); });
-    reg.reg("Loop",       "Loop",       {60, 160,  90, 255},
+    reg.reg("Clock Div",  "Clock Div",  C::Timing,
+            [](Vec2 pos){ return std::make_unique<ClockDivNode>(pos); });
+    reg.reg("Loop",       "Loop",       C::Timing,
             [](Vec2 pos){ return std::make_unique<LoopTimerNode>(pos); });
+    reg.reg("Timer",      "Timer",      C::Timing,
+            [](Vec2 pos){ return std::make_unique<TimerNode>(pos); });
+    reg.reg("Pulse",      "Pulse",      C::Timing,
+            [](Vec2 pos){ return std::make_unique<PulseNode>(pos); });
+
+    // Sequence
+    reg.reg("Sequencer CV",     "Seq CV",     C::Sequence,
+            [](Vec2 pos){ return std::make_unique<StepSeqNode>(pos); });
+    reg.reg("Sequencer Trig",   "Seq Trig",   C::Sequence,
+            [](Vec2 pos){ return std::make_unique<TrigSeqNode>(pos); });
+    reg.reg("Sequencer Router", "Seq Router", C::Sequence,
+            [](Vec2 pos){ return std::make_unique<StepRouterNode>(pos); });
+
+    // Utility
+    reg.reg("Number",     "Number",     C::Utility,
+            [](Vec2 pos){ return std::make_unique<NumberNode>(pos); });
+    reg.reg("Scale",      "Scale",      C::Utility,
+            [](Vec2 pos){ return std::make_unique<ScaleNode>(pos); });
+    reg.reg("Button",     "Button",     C::Utility,
+            [](Vec2 pos){ return std::make_unique<ButtonNode>(pos); });
+
+    // Display
+    reg.reg("Scope",      "Scope",      C::Display,
+            [](Vec2 pos){ return std::make_unique<ScopeNode>(pos); });
+    reg.reg("Polygon",    "Polygon",    C::Display,
+            [](Vec2 pos){ return std::make_unique<PolyNode>(pos); });
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -135,6 +149,7 @@ int main(int /*argc*/, char* /*argv*/[])
                     tex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
                                             SDL_TEXTUREACCESS_STREAMING, W, H);
                     nc.resize(W, H);
+                    palette.resize(H);
                     break;
 
                 case SDL_EVENT_KEY_DOWN:
@@ -154,7 +169,12 @@ int main(int /*argc*/, char* /*argv*/[])
                     nc.onMouseUp(ev.button.x, ev.button.y, ev.button.button);
                     break;
 
+                case SDL_EVENT_WINDOW_MOUSE_LEAVE:
+                    palette.onMouseLeave();
+                    break;
+
                 case SDL_EVENT_MOUSE_MOTION:
+                    palette.onMouseMove(ev.motion.x, ev.motion.y);
                     nc.onMouseMove(ev.motion.x, ev.motion.y,
                                    ev.motion.xrel, ev.motion.yrel);
                     break;

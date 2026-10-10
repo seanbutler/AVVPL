@@ -70,6 +70,7 @@ Dependencies are fetched automatically: SDL3, ThorVG (built via Meson), nlohmann
 |---|---|
 | **Number** | Scalar float output via a slider |
 | **Scale** | Maps an input float from one range to another (clamps to input range) |
+| **Button** | Clickable pad; Trig fires on press, Rel on release. Wire Trig into Reset inputs to restart a tune |
 | **Polygon** | Displays a regular polygon driven by Sides, Radius, and Rotation CV inputs |
 
 ## Example patch — sequenced melody

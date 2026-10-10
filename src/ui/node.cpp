@@ -67,6 +67,9 @@ void Node::draw(tvg::Scene& scene) {
     pushRect(scene, wp.x, wp.y, width, kTitleH, kCornerR, titleCol);
     // Cover bottom-round of title bar with a square-bottomed rect
     pushRect(scene, wp.x, wp.y + kTitleH * 0.5f, width, kTitleH * 0.5f, 0.f, titleCol);
+    // Category stripe along the bottom of the title bar — matches the palette button colour
+    if (accent.a > 0)
+        pushRect(scene, wp.x, wp.y + kTitleH - kAccentH, width, kAccentH, 0.f, accent);
 
     // Title text
     if (NodeCanvas::fontLoaded() && !title.empty()) {
@@ -74,7 +77,7 @@ void Node::draw(tvg::Scene& scene) {
         if (t->font(NodeCanvas::fontName().c_str(), 11.f) == tvg::Result::Success) {
             t->text(title.c_str());
             t->fill(220, 220, 235);
-            t->translate(wp.x + kPadX, wp.y + kTitleH * 0.5f - 5.f);
+            t->translate(wp.x + kPadX, wp.y + kTitleH * 0.5f - 7.f);
             scene.push(std::move(t));
         }
     }

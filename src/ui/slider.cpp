@@ -19,7 +19,7 @@ void SliderWidget::draw(tvg::Scene& scene) {
         else if (av >= 10.f)  std::snprintf(valBuf, sizeof(valBuf), "%.1f", value);
         else                  std::snprintf(valBuf, sizeof(valBuf), "%.2f", value);
 
-        float textY = wp.y + 10.f;
+        float textY = wp.y + 8.f;
 
         if (!label.empty()) {
             auto tl = tvg::Text::gen();

@@ -42,7 +42,9 @@ public:
 
     nlohmann::json toJson()  const override { return value; }
     void fromJson(const nlohmann::json& j) override {
-        if (j.is_number()) value = clampf(j.get<float>(), min, max);
+        if (!j.is_number()) return;
+        value = clampf(j.get<float>(), min, max);
+        if (onChange) onChange(value);  // so the owning node picks up loaded values
     }
 
 private:

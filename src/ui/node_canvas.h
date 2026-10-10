@@ -14,6 +14,8 @@ class NodeCanvas {
 public:
     explicit NodeCanvas(int w, int h);
 
+    bool showGrid = false;  // background grid lines (off for now)
+
     // Add a node; returns raw pointer for adding sockets/widgets.
     Node* addNode(std::unique_ptr<Node> n);
 

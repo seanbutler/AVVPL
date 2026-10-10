@@ -20,6 +20,7 @@
 ## Sequencing
 
 - [x] Number node — scalar float output via slider
+- [x] Button node — manual Trig (press) / Rel (release); wire to Reset inputs to restart sequences
 - [x] Waveform node — discrete waveform type selector (Sine/Sqr/Saw/Tri/Noise)
 - [x] Sequencer CV — 16-step lane, CV output scaled by Max slider, Trig output per step
 - [x] Sequencer Trig — 16-step gate sequencer, each step toggles on/off, fires Trig output
@@ -71,6 +72,32 @@
 - [ ] Dark/light theme toggle
 - [ ] Separate visual style into a JSON style doc — move `pal::` colours, sizes and font settings out of code into a loadable file (prerequisite for theming)
 
+## Palette & visual clarity (prioritised)
+
+Problem: every palette button has its own unrelated hue, the order is arbitrary, labels overflow, and nothing links palette colours to nodes on the canvas — the user has to read every label.
+
+**P1 — structure (biggest readability win)**
+- [x] Add a `category` field to `NodeTypeInfo` (Sound / Timing / Sequence / Utility / Display) and register nodes by category, replacing per-node colours
+- [x] Order palette by category with small dim section headers (match README groupings; move Timer/Loop/Pulse next to Tempo/Clock Div)
+- [x] One muted colour per category (Sound amber, Timing teal, Sequence violet, Utility slate, Display blue), defined as named `pal::` constants
+
+**P2 — legibility**
+- [x] Restyle buttons: dark neutral fill + 3–4px category-coloured left stripe + light text (fixes white-on-yellow contrast)
+- [x] Fix label overflow: widen panel to ~130px and shorten labels ("Seq CV", "Seq Trig", "Seq Router")
+- [x] Reduce button height 32 → ~24px so the full list fits comfortably
+- [x] Separate Save/Load from node buttons: outline/ghost style, pinned to the bottom of the panel
+
+**P3 — feedback & canvas link**
+- [x] Hover highlight — `hoveredIdx` exists in `palette.h` but is never set; wire it from mouse motion
+- [x] Category-coloured stripe/tint on node title bars so palette colours map to nodes on the canvas
+- [x] `Palette::contains` should check `y < panelH` (see refactorings below)
+
+**P4 — later**
+- [ ] Collapsible categories and/or type-to-filter search once the node count grows
+- [ ] Drag from palette to place a node instead of cascading spawn position
+- [ ] Colour sockets/wires by signal type (audio / CV / trigger)
+- [ ] Move category colours and palette metrics into the JSON style doc (above)
+
 ## Infrastructure
 
 - [ ] Remove stale `buildScene` function from main.cpp
@@ -109,11 +136,7 @@ become available.
 exactly this purpose. Replace `M_PI` with `kPi` for consistency and portability.
 
 ### ~~Replace grid dots with grid lines (`node_canvas.cpp:100-114`)~~ ✓
-Each dot is a separate `tvg::Shape` — ~1,750 allocations per frame at default zoom. Replace with
-a single `tvg::Shape` containing all horizontal and vertical lines as `moveTo`/`lineTo` subpaths
-(~86 lines → 1 shape). Scale the grid step with zoom so lines never get closer than ~20 px on
-screen: `float screenStep = step * camZoom; while (screenStep < 20.f) screenStep *= 2;` then
-derive world step as `screenStep / camZoom`.
+Each dot is a separate `tvg::Shape` — ~1,750 allocations per frame at default zoom. Replace with a single `tvg::Shape` containing all horizontal and vertical lines as `moveTo`/`lineTo` subpaths (~86 lines → 1 shape). Scale the grid step with zoom so lines never get closer than ~20 px on screen: `float screenStep = step * camZoom; while (screenStep < 20.f) screenStep *= 2;` then derive world step as `screenStep / camZoom`.
 
 ### Magic numbers in render code
 Several raw literals should be named constants in `pal::` or adjacent:
@@ -124,26 +147,17 @@ Several raw literals should be named constants in `pal::` or adjacent:
 - `dispAmp` smoothing coefficient `0.3f` (`tone_node.cpp:49`) — depends implicitly on the 1ms tick; should at least have a comment tying it to `kFixedStep`
 
 ### Wire save is O(W × N × S) (`graph_io.cpp:73-84`)
-For each wire, the save loop re-scans all nodes and their sockets to find socket ownership. Build
-a reverse map `SocketWidget* → {node_idx, sock_idx}` once before the wire loop to reduce it to
-O(N×S + W).
+For each wire, the save loop re-scans all nodes and their sockets to find socket ownership. Build a reverse map `SocketWidget* → {node_idx, sock_idx}` once before the wire loop to reduce it to O(N×S + W).
 
 ### Redundant socket hit test in `onMouseDown` (`node_canvas.cpp:177-190`)
-After the right-click branch returns, the left-click path calls `socketAt(pt)` at line 177, then
-immediately calls `hitTest(pt)` and `dynamic_cast<SocketWidget*>(hit)` at line 186. The second
-path can never fire because `socketAt` already handled it. Remove the `hitTest` + cast fallback.
+After the right-click branch returns, the left-click path calls `socketAt(pt)` at line 177, then immediately calls `hitTest(pt)` and `dynamic_cast<SocketWidget*>(hit)` at line 186. The second path can never fire because `socketAt` already handled it. Remove the `hitTest` + cast fallback.
 
 ### `WireLayer::findSocketAt` is dead code (`wire_layer.cpp:70-77`)
-This method accepts a widget root list and searches for a socket, but `NodeCanvas::socketAt`
-fills the same role and is what the canvas actually calls. `findSocketAt` is never invoked.
-Delete it or consolidate so `NodeCanvas::socketAt` delegates to it.
+This method accepts a widget root list and searches for a socket, but `NodeCanvas::socketAt` fills the same role and is what the canvas actually calls. `findSocketAt` is never invoked. Delete it or consolidate so `NodeCanvas::socketAt` delegates to it.
 
-### `Palette::contains` ignores Y axis (`palette.cpp:42-44`)
+### ~~`Palette::contains` ignores Y axis~~ ✓ (`palette.cpp:42-44`)
 `(void)y; return x < kW;` means every click anywhere in the palette column — even below all
-buttons — is consumed and blocked from reaching the canvas. Check `y < panelH` so the canvas
-receives events below the panel.
+buttons — is consumed and blocked from reaching the canvas. Check `y < panelH` so the canvas receives events below the panel.
 
 ### Audio callback uses fixed stack buffer (`tone_node.cpp:60-61`)
-`float buf[4096]` is stack-allocated and `frames` is silently clamped to 4096. If SDL requests
-more than 4096 frames the extra samples are dropped without any warning. Add an assertion, or
-allocate the buffer dynamically based on `additionalBytes`.
+`float buf[4096]` is stack-allocated and `frames` is silently clamped to 4096. If SDL requests more than 4096 frames the extra samples are dropped without any warning. Add an assertion, or allocate the buffer dynamically based on `additionalBytes`.

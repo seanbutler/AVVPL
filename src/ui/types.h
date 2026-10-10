@@ -39,6 +39,22 @@ namespace pal {
     inline constexpr Color4 WireColor   {190,165,  55,  210};
     inline constexpr Color4 WireDraft   {200,200, 200,  120};
     inline constexpr Color4 CanvasBg    { 18,  18,  22,  255};
+
+    // Node category colours (palette buttons; muted so light text stays legible)
+    inline constexpr Color4 CatSound    {150, 115,  45,  255};  // amber
+    inline constexpr Color4 CatTiming   { 45, 125, 125,  255};  // teal
+    inline constexpr Color4 CatSequence {105,  80, 150,  255};  // violet
+    inline constexpr Color4 CatUtility  { 85,  95, 110,  255};  // slate
+    inline constexpr Color4 CatDisplay  { 55,  95, 150,  255};  // blue
+
+    inline constexpr Color4 PalHeader   {120, 120, 140,  255};  // palette section header text
+    inline constexpr Color4 PalBg       { 22,  22,  30,  245};
+    inline constexpr Color4 PalBorder   { 55,  55,  72,  200};
+    inline constexpr Color4 PalBtn      { 36,  36,  48,  255};  // node button fill
+    inline constexpr Color4 PalBtnHover { 50,  50,  66,  255};
+    inline constexpr Color4 PalBtnText  {220, 220, 235,  255};
+    inline constexpr Color4 PalGhost    { 90,  90, 112,  255};  // Save/Load outline
+    inline constexpr Color4 PalGhostText{170, 170, 190,  255};
 }
 
 inline float clamp01(float v) { return std::max(0.f, std::min(1.f, v)); }
