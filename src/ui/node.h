@@ -14,7 +14,7 @@ public:
     bool        selected = false;
     Color4      accent   {0, 0, 0, 0};  // category colour stripe under the title; set by NodeRegistry
 
-    static constexpr float kCornerR    =  8.f;
+    static constexpr float kCornerR    =  0.f;
     static constexpr float kTitleH     = 24.f;
     static constexpr float kPadX       = 10.f;
     static constexpr float kPadY       =  6.f;

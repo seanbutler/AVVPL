@@ -61,7 +61,6 @@ public:
     void tick(float dt) override {
         if (inGate->value.trig) {
             envPhase = Phase::Attack;
-            level = 0.f;
         }
         if (inRelease->value.trig && envPhase != Phase::Idle) {
             envPhase = Phase::Release;
