@@ -29,6 +29,7 @@ Dependencies are fetched automatically: SDL3, ThorVG (built via Meson), nlohmann
 | Right-click on node | Delete node |
 | Right-click on socket | Disconnect socket |
 | Right-click near wire | Delete wire |
+| Left-click drag on empty canvas | Pan canvas |
 | Middle-click drag | Pan canvas |
 | Scroll wheel | Zoom canvas |
 | Ctrl+S | Save graph to `graph.json` |
@@ -70,6 +71,7 @@ Dependencies are fetched automatically: SDL3, ThorVG (built via Meson), nlohmann
 |---|---|
 | **Number** | Scalar float output via a slider |
 | **Scale** | Maps an input float from one range to another (clamps to input range) |
+| **Quantise** | Snaps an input frequency (Hz) to the nearest note of a chosen scale and root; Trig fires on each note change |
 | **Button** | Clickable pad; Trig fires on press, Rel on release. Wire Trig into Reset inputs to restart a tune |
 | **Polygon** | Displays a regular polygon driven by Sides, Radius, and Rotation CV inputs |
 

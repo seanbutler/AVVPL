@@ -43,7 +43,16 @@ ToneNode::ToneNode(Vec2 pos) : Node("Tone", pos) {
 
     stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
                                        &spec, audioGetCb, this);
-    if (stream) SDL_ResumeAudioStreamDevice(stream);
+    if (stream) {
+        SDL_ResumeAudioStreamDevice(stream);
+        static bool logged = false;  // report the device buffer once, for latency diagnosis
+        SDL_AudioSpec dev; int frames = 0;
+        if (!logged && SDL_GetAudioDeviceFormat(SDL_GetAudioStreamDevice(stream), &dev, &frames)) {
+            SDL_Log("Audio: %s, %d Hz, %d-frame device buffer (~%.1f ms)",
+                    SDL_GetCurrentAudioDriver(), dev.freq, frames, 1000.0 * frames / dev.freq);
+            logged = true;
+        }
+    }
 }
 
 ToneNode::~ToneNode() {

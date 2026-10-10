@@ -19,6 +19,7 @@
 #include "ui/trig_seq_node.h"
 #include "ui/step_router_node.h"
 #include "ui/scale_node.h"
+#include "ui/quantise_node.h"
 #include "ui/poly_node.h"
 #include "ui/scope_node.h"
 
@@ -69,6 +70,8 @@ static void registerNodes() {
             [](Vec2 pos){ return std::make_unique<NumberNode>(pos); });
     reg.reg("Scale",      "Scale",      C::Utility,
             [](Vec2 pos){ return std::make_unique<ScaleNode>(pos); });
+    reg.reg("Quantise",   "Quantise",   C::Utility,
+            [](Vec2 pos){ return std::make_unique<QuantiseNode>(pos); });
     reg.reg("Button",     "Button",     C::Utility,
             [](Vec2 pos){ return std::make_unique<ButtonNode>(pos); });
 
@@ -89,6 +92,10 @@ int main(int /*argc*/, char* /*argv*/[])
     }
 
     NodeCanvas::loadFont("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "DejaVuSans");
+
+    // Ask for small audio buffers: SDL's default adds noticeable output latency, which
+    // makes sounds land after the sequencer step that triggered them is highlighted.
+    SDL_SetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES, "256");
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
         SDL_Log("SDL_Init: %s", SDL_GetError());

@@ -30,7 +30,7 @@
 - [x] Pulse node — converts a trigger to a timed gate with Gate and Rel outputs
 - [x] Envelope node — ADSR with exponential decay/release, Gate and Rel inputs, up to 8s decay
 - [ ] Random node — outputs a random float on each trigger
-- [ ] Quantise node — snaps a float to the nearest musical note (CV → Hz)
+- [x] Quantise node — snaps Hz to the nearest note of a scale (Chrom/Major/Minor/Pentatonics/Blues) and root
 - [ ] Euclidean sequencer — distributes K beats across N steps (Bjorklund algorithm), with rotation offset
 - [ ] Probability sequencer — each of 16 steps has an independent chance to fire
 - [ ] Arpeggiator — cycles through a set of held CV values on each trigger

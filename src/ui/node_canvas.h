@@ -73,6 +73,7 @@ private:
     Widget*  captured        = nullptr;
     bool     isWireDrag      = false;
     bool     isPanning       = false;
+    int      panButton       = 0;      // mouse button that started the current pan
     bool     capturedIsDrag  = false;  // true when captured node was hit on its title bar
     Vec2     lastMouse       = {};
 

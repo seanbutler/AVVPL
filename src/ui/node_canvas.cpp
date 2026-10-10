@@ -152,7 +152,7 @@ void NodeCanvas::onMouseDown(float x, float y, int btn) {
     lastMouse = {x, y};
 
     // Middle mouse: start canvas pan.
-    if (btn == 2) { isPanning = true; return; }
+    if (btn == 2) { isPanning = true; panButton = btn; return; }
 
     Vec2 pt = screenToWorld({x, y});
 
@@ -188,7 +188,9 @@ void NodeCanvas::onMouseDown(float x, float y, int btn) {
     }
 
     Widget* hit = hitTest(pt);
-    if (!hit) return;
+    // Left-drag on empty canvas also pans — middle-click is unreliable on some
+    // setups (WSLg forwards input over RDP; many touchpads have no middle button).
+    if (!hit) { isPanning = true; panButton = btn; return; }
 
     if (auto* s = dynamic_cast<SocketWidget*>(hit)) {
         wireLayer.beginDraft(s, pt);
@@ -205,7 +207,7 @@ void NodeCanvas::onMouseDown(float x, float y, int btn) {
 }
 
 void NodeCanvas::onMouseUp(float x, float y, int btn) {
-    if (btn == 2) { isPanning = false; return; }
+    if (isPanning && btn == panButton) { isPanning = false; return; }
 
     Vec2 pt = screenToWorld({x, y});
 
