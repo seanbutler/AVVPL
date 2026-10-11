@@ -48,6 +48,7 @@ public:
 
     SocketWidget* inTrig  = nullptr;
     SocketWidget* inReset = nullptr;
+    SocketWidget* outEOC  = nullptr;
     std::array<SocketWidget*, kSteps> outTrig = {};
 
     explicit StepRouterNode(Vec2 pos = {}) : Node("Sequencer Router", pos) {
@@ -58,23 +59,30 @@ public:
 
         indicator = addWidget(std::make_unique<StepIndicatorWidget>());
 
+        outEOC = addOutput("EOC", SocketType::Trigger);
         for (int i = 0; i < kSteps; ++i)
             outTrig[i] = addOutput(std::to_string(i + 1), SocketType::Trigger);
     }
 
     void tick(float /*dt*/) override {
+        outEOC->value.trig = false;
+
         if (inReset->value.trig) {
             step    = 0;
             atStart = true;
         }
 
-        // Clear all outputs first
         for (int i = 0; i < kSteps; ++i)
             outTrig[i]->value.trig = false;
 
         if (inTrig->value.trig) {
-            if (atStart) atStart = false;            // first Trig plays step 0
-            else         step = (step + 1) % kSteps;
+            if (atStart) {
+                atStart = false;
+            } else {
+                if (step == kSteps - 1)
+                    outEOC->value.trig = true;
+                step = (step + 1) % kSteps;
+            }
             outTrig[step]->value.trig = true;
         }
 

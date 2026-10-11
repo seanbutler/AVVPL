@@ -84,6 +84,7 @@ public:
     SocketWidget* inTrig  = nullptr;
     SocketWidget* inReset = nullptr;
     SocketWidget* outTrig = nullptr;
+    SocketWidget* outEOC  = nullptr;
 
     explicit TrigSeqNode(Vec2 pos = {}) : Node("Sequencer Trig", pos) {
         width = 390.f;
@@ -94,17 +95,25 @@ public:
         lane = addWidget(std::make_unique<GateLaneWidget>());
 
         outTrig = addOutput("Trig", SocketType::Trigger);
+        outEOC  = addOutput("EOC",  SocketType::Trigger);
     }
 
     void tick(float /*dt*/) override {
+        outEOC->value.trig = false;
+
         if (inReset->value.trig) {
             step    = 0;
             atStart = true;
         }
 
         if (inTrig->value.trig) {
-            if (atStart) atStart = false;            // first Trig plays step 0
-            else         step = (step + 1) % GateLaneWidget::kSteps;
+            if (atStart) {
+                atStart = false;
+            } else {
+                if (step == GateLaneWidget::kSteps - 1)
+                    outEOC->value.trig = true;
+                step = (step + 1) % GateLaneWidget::kSteps;
+            }
             outTrig->value.trig = lane->gates[step];
         }
 

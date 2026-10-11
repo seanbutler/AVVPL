@@ -107,6 +107,7 @@ public:
     SocketWidget* inReset = nullptr;
     SocketWidget* outCV   = nullptr;
     SocketWidget* outTrig = nullptr;
+    SocketWidget* outEOC  = nullptr;
 
     explicit StepSeqNode(Vec2 pos = {}) : Node("Sequencer CV", pos) {
         width = 390.f;
@@ -121,17 +122,25 @@ public:
 
         outCV   = addOutput("CV",   SocketType::CV);
         outTrig = addOutput("Trig", SocketType::Trigger);
+        outEOC  = addOutput("EOC",  SocketType::Trigger);
     }
 
     void tick(float /*dt*/) override {
+        outEOC->value.trig = false;
+
         if (inReset->value.trig) {
             step    = 0;
             atStart = true;
         }
 
         if (inTrig->value.trig) {
-            if (atStart) atStart = false;            // first Trig plays step 0
-            else         step = (step + 1) % StepLaneWidget::kSteps;
+            if (atStart) {
+                atStart = false;
+            } else {
+                if (step == StepLaneWidget::kSteps - 1)
+                    outEOC->value.trig = true;
+                step = (step + 1) % StepLaneWidget::kSteps;
+            }
             outTrig->value.trig = lane->values[step] > 0.01f;
         }
 
