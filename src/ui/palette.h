@@ -20,7 +20,9 @@ public:
     static constexpr float kHeaderH  =  16.f;  // category section header height
     static constexpr float kStripeW  =   4.f;  // category colour stripe on node buttons
 
-    Palette(int canvasH, NodeCanvas& nc);
+    Palette(int canvasH, NodeCanvas& nc,
+            std::function<void()> onSave = {},
+            std::function<void()> onLoad = {});
 
     void draw(tvg::Scene& scene) const;
     void resize(int canvasH);                 // re-pins the footer to the window bottom

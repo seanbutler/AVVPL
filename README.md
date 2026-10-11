@@ -31,9 +31,11 @@ Dependencies are fetched automatically: SDL3, ThorVG (built via Meson), nlohmann
 | Right-click near wire | Delete wire |
 | Left-click drag on empty canvas | Pan canvas |
 | Middle-click drag | Pan canvas |
-| Scroll wheel | Zoom canvas |
+| Scroll wheel | Zoom canvas (0.35× – 3×) |
+| Shift + drag slider | Snap slider to discrete steps scaled to its range |
 | Ctrl+S | Save graph to `graph.json` |
 | Ctrl+O | Load graph from `graph.json` |
+| F11 | Toggle fullscreen |
 | Escape | Quit |
 
 ## Nodes
@@ -69,7 +71,7 @@ Dependencies are fetched automatically: SDL3, ThorVG (built via Meson), nlohmann
 
 | Node | Description |
 |---|---|
-| **Number** | Scalar float output via a slider |
+| **Number** | Scalar float output via a slider with configurable Min/Max range |
 | **Scale** | Maps an input float from one range to another (clamps to input range) |
 | **Quantise** | Snaps an input frequency (Hz) to the nearest note of a chosen scale and root; Trig fires on each note change |
 | **Button** | Clickable pad; Trig fires on press, Rel on release. Wire Trig into Reset inputs to restart a tune |
@@ -119,7 +121,12 @@ src/
     waveform_node.h       — WaveformNode
     scale_node.h          — ScaleNode
     poly_node.h           — PolyNode with live polygon display
+    scope_node.h          — ScopeNode oscilloscope display
+    button_node.h         — ButtonNode manual trigger pad
+    quantise_node.h       — QuantiseNode Hz → nearest scale note
 ```
 
 **Tick order each frame:** clear output triggers → tick all nodes → propagate wires.  
 Input triggers persist one frame (set by propagation, read by the receiving node next tick).
+
+**Logic timing:** the main loop runs node ticks in fixed 1ms steps independent of render frame rate, so tempo and sequencing stay accurate even when rendering is slow.

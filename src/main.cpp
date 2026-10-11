@@ -23,13 +23,60 @@
 #include "ui/poly_node.h"
 #include "ui/scope_node.h"
 
+#include <SDL3/SDL_dialog.h>
 #include <cmath>
 #include <cstdlib>
 #include <memory>
+#include <mutex>
+#include <string>
 
 static int W = 1280;
 static int H = 800;
 
+
+// ── File dialog ───────────────────────────────────────────────────────────────
+
+struct PendingFile {
+    std::mutex  mtx;
+    std::string path;
+    bool        ready  = false;
+    bool        isSave = false;
+};
+
+static void SDLCALL dialogCb(void* userdata, const char* const* filelist, int /*filter*/) {
+    auto* pf = static_cast<PendingFile*>(userdata);
+    std::lock_guard<std::mutex> lk(pf->mtx);
+    pf->path  = (filelist && filelist[0]) ? filelist[0] : "";
+    pf->ready = true;
+}
+
+static const SDL_DialogFileFilter kJsonFilter[] = {
+    { "AVVPL graph", "json" },
+    { "All files",   "*"    },
+};
+
+static std::string defaultGraphPath() {
+    // Use the executable's directory so the dialog opens next to the binary.
+    const char* base = SDL_GetBasePath();
+    std::string path = base ? std::string(base) + "graph.json" : "graph.json";
+    return path;
+}
+
+static void openSaveDialog(SDL_Window* win, PendingFile& pf) {
+    std::lock_guard<std::mutex> lk(pf.mtx);
+    pf.ready  = false;
+    pf.isSave = true;
+    static std::string def = defaultGraphPath();
+    SDL_ShowSaveFileDialog(dialogCb, &pf, win, kJsonFilter, 2, def.c_str());
+}
+
+static void openLoadDialog(SDL_Window* win, PendingFile& pf) {
+    std::lock_guard<std::mutex> lk(pf.mtx);
+    pf.ready  = false;
+    pf.isSave = false;
+    static std::string def = defaultGraphPath();
+    SDL_ShowOpenFileDialog(dialogCb, &pf, win, kJsonFilter, 2, def.c_str(), false);
+}
 
 // ── Register all node types ───────────────────────────────────────────────────
 
@@ -128,7 +175,11 @@ int main(int /*argc*/, char* /*argv*/[])
 
     NodeCanvas nc(W, H);
 
-    Palette palette(H, nc);
+    PendingFile pendingFile;
+
+    Palette palette(H, nc,
+        [&]{ openSaveDialog(window, pendingFile); },
+        [&]{ openLoadDialog(window, pendingFile); });
     nc.setOverlay([&palette](tvg::Scene& s){ palette.draw(s); });
 
     bool   running  = true;
@@ -162,9 +213,13 @@ int main(int /*argc*/, char* /*argv*/[])
                 case SDL_EVENT_KEY_DOWN:
                     if (ev.key.key == SDLK_ESCAPE) running = false;
                     if (ev.key.key == SDLK_S && (ev.key.mod & SDL_KMOD_CTRL))
-                        graphSave(nc, "graph.json");
+                        openSaveDialog(window, pendingFile);
                     if (ev.key.key == SDLK_O && (ev.key.mod & SDL_KMOD_CTRL))
-                        graphLoad(nc, "graph.json");
+                        openLoadDialog(window, pendingFile);
+                    if (ev.key.key == SDLK_F11) {
+                        bool fs = (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) != 0;
+                        SDL_SetWindowFullscreen(window, !fs);
+                    }
                     break;
 
                 case SDL_EVENT_MOUSE_BUTTON_DOWN:
@@ -191,6 +246,23 @@ int main(int /*argc*/, char* /*argv*/[])
                         nc.onMouseWheel(ev.wheel.mouse_x, ev.wheel.mouse_y, ev.wheel.y);
                     break;
             }
+        }
+
+        // Check for a completed file dialog
+        {
+            std::lock_guard<std::mutex> lk(pendingFile.mtx);
+            if (pendingFile.ready && !pendingFile.path.empty()) {
+                if (pendingFile.isSave) graphSave(nc, pendingFile.path);
+                else                    graphLoad(nc, pendingFile.path);
+
+                // Show filename in window title bar
+                std::string fname = pendingFile.path;
+                auto slash = fname.find_last_of("/\\");
+                if (slash != std::string::npos) fname = fname.substr(slash + 1);
+                SDL_SetWindowTitle(window,
+                    ("AVVPL — " + fname).c_str());
+            }
+            pendingFile.ready = false;
         }
 
         // Drain accumulated real time in fixed 1ms steps so timing nodes

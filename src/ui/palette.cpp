@@ -6,7 +6,10 @@
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 
-Palette::Palette(int canvasH, NodeCanvas& canvas) : nc(canvas) {
+Palette::Palette(int canvasH, NodeCanvas& canvas,
+                 std::function<void()> onSave,
+                 std::function<void()> onLoad)
+    : nc(canvas) {
     auto& reg = NodeRegistry::get();
 
     // One button per registered node type, with a header at each category change.
@@ -34,9 +37,9 @@ Palette::Palette(int canvasH, NodeCanvas& canvas) : nc(canvas) {
         buttons.push_back(std::move(btn));
     }
 
-    // Footer: Save / Load
-    buttons.push_back({"Save", {}, [this]{ graphSave(nc, "graph.json"); }, Kind::Ghost});
-    buttons.push_back({"Load", {}, [this]{ graphLoad(nc, "graph.json"); }, Kind::Ghost});
+    // Footer: Save / Load — actions provided by main so they can open a file dialog
+    buttons.push_back({"Save", {}, onSave ? onSave : [this]{ graphSave(nc, "graph.json"); }, Kind::Ghost});
+    buttons.push_back({"Load", {}, onLoad ? onLoad : [this]{ graphLoad(nc, "graph.json"); }, Kind::Ghost});
 
     resize(canvasH);
 }
