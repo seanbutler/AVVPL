@@ -3,9 +3,14 @@
 #include <algorithm>
 #include <cmath>
 
-static std::vector<ToneNode*> gToneNodes;
+static std::vector<ToneNode*>  gToneNodes;
+static std::atomic<bool>       s_globalMute{false};
 
 const std::vector<ToneNode*>& ToneNode::instances() { return gToneNodes; }
+
+void ToneNode::setAllMuted(bool muted) {
+    s_globalMute.store(muted, std::memory_order_relaxed);
+}
 
 void ToneNode::mixRecent(float* dst, int n) const {
     uint32_t w = tapWrite.load(std::memory_order_acquire);
@@ -89,6 +94,11 @@ void SDLCALL ToneNode::audioGetCb(void* userdata, SDL_AudioStream* /*stream*/,
 }
 
 void ToneNode::fillBuffer(float* out, int frames) {
+    if (s_globalMute.load(std::memory_order_relaxed)) {
+        std::fill(out, out + frames, 0.f);
+        return;
+    }
+
     float  f    = atomFreq.load(std::memory_order_relaxed);
     float  a    = atomAmp .load(std::memory_order_relaxed);
     int    wave = atomWave.load(std::memory_order_relaxed);

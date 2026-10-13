@@ -1,4 +1,5 @@
 #include "node_canvas.h"
+#include "tone_node.h"
 #include <algorithm>
 #include <cmath>
 
@@ -39,6 +40,8 @@ static void clearTriggers(Widget* w) {
 }
 
 void NodeCanvas::tick(float dt) {
+    if (transportState != Transport::Playing) return;
+
     // 1. Clear stale one-frame triggers from last tick's propagation.
     for (auto& n : nodes) clearTriggers(n.get());
 
@@ -46,6 +49,33 @@ void NodeCanvas::tick(float dt) {
     for (auto& n : nodes) n->tick(dt);
 
     // 3. Propagate output values along wires to downstream input sockets.
+    wireLayer.propagate();
+}
+
+void NodeCanvas::play() {
+    ToneNode::setAllMuted(false);
+    transportState = Transport::Playing;
+}
+
+void NodeCanvas::pause() {
+    ToneNode::setAllMuted(true);
+    transportState = Transport::Paused;
+}
+
+void NodeCanvas::stop() {
+    ToneNode::setAllMuted(true);
+    transportState = Transport::Stopped;
+    // Send a reset trigger to every node's first input socket named "Reset"
+    // by setting it high for one tick, then ticking all nodes once.
+    for (auto& n : nodes) {
+        for (auto& c : n->children) {
+            auto* s = dynamic_cast<SocketWidget*>(c.get());
+            if (s && s->dir == SocketDir::Input && s->label == "Reset")
+                s->value.trig = true;
+        }
+    }
+    for (auto& n : nodes) n->tick(0.f);
+    for (auto& n : nodes) clearTriggers(n.get());
     wireLayer.propagate();
 }
 
@@ -200,8 +230,10 @@ void NodeCanvas::onMouseDown(float x, float y, int btn) {
 
     captured = hit;
     capturedIsDrag = false;
-    if (auto* node = dynamic_cast<Node*>(hit))
+    if (auto* node = dynamic_cast<Node*>(hit)) {
         capturedIsDrag = node->titleBarHit(pt);
+        lastSelected   = node;
+    }
 
     hit->onMouseDown(pt, btn);
 }

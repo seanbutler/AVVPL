@@ -27,6 +27,9 @@ public:
     // All live ToneNodes (main thread only) — used by ScopeNode to mix the graph's output.
     static const std::vector<ToneNode*>& instances();
 
+    // Silence / un-silence all streams atomically (called by transport controls).
+    static void setAllMuted(bool muted);
+
     // Adds the most recent n output samples (oldest first) into dst. Keep n <= kTapSize / 2.
     static constexpr int kTapSize = 16384;  // power of two
     void mixRecent(float* dst, int n) const;

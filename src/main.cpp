@@ -22,6 +22,7 @@
 #include "ui/quantise_node.h"
 #include "ui/poly_node.h"
 #include "ui/scope_node.h"
+#include "ui/transport_bar.h"
 
 #include <SDL3/SDL_dialog.h>
 #include <cmath>
@@ -173,14 +174,22 @@ int main(int /*argc*/, char* /*argv*/[])
 
     registerNodes();
 
-    NodeCanvas nc(W, H);
+    const int kTBarH = (int)TransportBar::kH;
+    NodeCanvas nc(W, H - kTBarH);
 
     PendingFile pendingFile;
 
-    Palette palette(H, nc,
+    TransportBar tbar(nc, W);
+
+    Palette palette(H - kTBarH, nc,
         [&]{ openSaveDialog(window, pendingFile); },
         [&]{ openLoadDialog(window, pendingFile); });
     nc.setOverlay([&palette](tvg::Scene& s){ palette.draw(s); });
+
+    // Transport bar renders into its own 1-px-per-unit scene above the canvas.
+    SDL_Texture* tbarTex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
+                                              SDL_TEXTUREACCESS_STREAMING,
+                                              W, kTBarH);
 
     bool   running  = true;
     SDL_Event ev;
@@ -205,9 +214,13 @@ int main(int /*argc*/, char* /*argv*/[])
                     H = ev.window.data2;
                     SDL_DestroyTexture(tex);
                     tex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
-                                            SDL_TEXTUREACCESS_STREAMING, W, H);
-                    nc.resize(W, H);
-                    palette.resize(H);
+                                            SDL_TEXTUREACCESS_STREAMING, W, H - kTBarH);
+                    SDL_DestroyTexture(tbarTex);
+                    tbarTex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
+                                                SDL_TEXTUREACCESS_STREAMING, W, kTBarH);
+                    nc.resize(W, H - kTBarH);
+                    palette.resize(H - kTBarH);
+                    tbar.resize(W);
                     break;
 
                 case SDL_EVENT_KEY_DOWN:
@@ -216,19 +229,25 @@ int main(int /*argc*/, char* /*argv*/[])
                         openSaveDialog(window, pendingFile);
                     if (ev.key.key == SDLK_O && (ev.key.mod & SDL_KMOD_CTRL))
                         openLoadDialog(window, pendingFile);
+                    if (ev.key.key == SDLK_D && (ev.key.mod & SDL_KMOD_CTRL))
+                        if (auto* sel = nc.selectedNode()) duplicateNode(nc, sel);
                     if (ev.key.key == SDLK_F11) {
                         bool fs = (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) != 0;
                         SDL_SetWindowFullscreen(window, !fs);
                     }
                     break;
 
-                case SDL_EVENT_MOUSE_BUTTON_DOWN:
-                    if (!palette.onMouseDown(ev.button.x, ev.button.y))
-                        nc.onMouseDown(ev.button.x, ev.button.y, ev.button.button);
+                case SDL_EVENT_MOUSE_BUTTON_DOWN: {
+                    float mx = ev.button.x, my = ev.button.y;
+                    if (tbar.onMouseDown(mx, my)) break;
+                    float cy = my - kTBarH;
+                    if (!palette.onMouseDown(mx, cy))
+                        nc.onMouseDown(mx, cy, ev.button.button);
                     break;
+                }
 
                 case SDL_EVENT_MOUSE_BUTTON_UP:
-                    nc.onMouseUp(ev.button.x, ev.button.y, ev.button.button);
+                    nc.onMouseUp(ev.button.x, ev.button.y - kTBarH, ev.button.button);
                     break;
 
                 case SDL_EVENT_WINDOW_MOUSE_LEAVE:
@@ -236,14 +255,14 @@ int main(int /*argc*/, char* /*argv*/[])
                     break;
 
                 case SDL_EVENT_MOUSE_MOTION:
-                    palette.onMouseMove(ev.motion.x, ev.motion.y);
-                    nc.onMouseMove(ev.motion.x, ev.motion.y,
+                    palette.onMouseMove(ev.motion.x, ev.motion.y - kTBarH);
+                    nc.onMouseMove(ev.motion.x, ev.motion.y - kTBarH,
                                    ev.motion.xrel, ev.motion.yrel);
                     break;
 
                 case SDL_EVENT_MOUSE_WHEEL:
-                    if (!palette.contains(ev.wheel.mouse_x, ev.wheel.mouse_y))
-                        nc.onMouseWheel(ev.wheel.mouse_x, ev.wheel.mouse_y, ev.wheel.y);
+                    if (!palette.contains(ev.wheel.mouse_x, ev.wheel.mouse_y - kTBarH))
+                        nc.onMouseWheel(ev.wheel.mouse_x, ev.wheel.mouse_y - kTBarH, ev.wheel.y);
                     break;
             }
         }
@@ -265,22 +284,43 @@ int main(int /*argc*/, char* /*argv*/[])
             pendingFile.ready = false;
         }
 
-        // Drain accumulated real time in fixed 1ms steps so timing nodes
-        // run at wall-clock speed regardless of render frame rate.
-        accumulator += dt;
-        while (accumulator >= kFixedStep) {
-            nc.tick((float)kFixedStep);
-            accumulator -= kFixedStep;
+        // Only advance the simulation clock while playing; pausing/stopping
+        // must not let time pile up and fire as a burst when play resumes.
+        if (nc.transport() == NodeCanvas::Transport::Playing) {
+            accumulator += dt;
+            while (accumulator >= kFixedStep) {
+                nc.tick((float)kFixedStep);
+                accumulator -= kFixedStep;
+            }
+        } else {
+            accumulator = 0.0;
         }
 
         nc.render();
 
+        // Render transport bar into its own SW buffer
+        {
+            std::vector<uint32_t> tbarBuf(W * kTBarH, 0);
+            auto tbarCanvas = tvg::SwCanvas::gen();
+            tbarCanvas->target(tbarBuf.data(), W, W, kTBarH, tvg::SwCanvas::ARGB8888S);
+            auto scene = tvg::Scene::gen();
+            tbar.draw(*scene);
+            tbarCanvas->push(std::move(scene));
+            tbarCanvas->draw();
+            tbarCanvas->sync();
+            SDL_UpdateTexture(tbarTex, nullptr, tbarBuf.data(), W * sizeof(uint32_t));
+        }
+
+        SDL_FRect tbarRect   = { 0, 0,           (float)W, (float)kTBarH        };
+        SDL_FRect canvasRect = { 0, (float)kTBarH, (float)W, (float)(H - kTBarH) };
         SDL_UpdateTexture(tex, nullptr, nc.pixels(), nc.canvasW() * sizeof(uint32_t));
         SDL_RenderClear(renderer);
-        SDL_RenderTexture(renderer, tex, nullptr, nullptr);
+        SDL_RenderTexture(renderer, tbarTex, nullptr, &tbarRect);
+        SDL_RenderTexture(renderer, tex, nullptr, &canvasRect);
         SDL_RenderPresent(renderer);
     }
 
+    SDL_DestroyTexture(tbarTex);
     SDL_DestroyTexture(tex);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);

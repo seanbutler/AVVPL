@@ -25,7 +25,7 @@
 - [ ] Socket type system — Trigger / Float / Audio with colour coding and connection validation
 - [x] Canvas pan and zoom — middle mouse button
 - [ ] Select multiple nodes (rubber-band drag) and move/delete as a group
-- [ ] Duplicate node (e.g. Ctrl+D)
+- [x] Duplicate node (Ctrl+D) — copies all widget values, no wires
 - [ ] Undo/redo
 
 ## Sequencing

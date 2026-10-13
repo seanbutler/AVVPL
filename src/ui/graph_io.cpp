@@ -160,3 +160,30 @@ bool graphLoad(NodeCanvas& nc, const std::string& path) {
 
     return true;
 }
+
+// ── duplicate ─────────────────────────────────────────────────────────────────
+
+void duplicateNode(NodeCanvas& nc, Node* n, float dx, float dy) {
+    auto& reg  = NodeRegistry::get();
+    auto* info = reg.find(n->title);
+    if (!info) return;
+
+    auto  owned = info->create({ n->localPos.x + dx, n->localPos.y + dy });
+    Node* copy  = owned.get();
+
+    // Copy socket defaults
+    auto srcSocks = nodeSockets(n);
+    auto dstSocks = nodeSockets(copy);
+    for (auto* ss : srcSocks)
+        for (auto* ds : dstSocks)
+            if (ds->dir == ss->dir && ds->index == ss->index)
+                { ds->fromJson(ss->toJson()); break; }
+
+    // Copy widget values
+    auto srcW = nodeWidgets(n);
+    auto dstW = nodeWidgets(copy);
+    for (size_t i = 0; i < srcW.size() && i < dstW.size(); ++i)
+        dstW[i]->fromJson(srcW[i]->toJson());
+
+    nc.addNode(std::move(owned));
+}

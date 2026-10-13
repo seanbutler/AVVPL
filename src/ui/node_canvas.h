@@ -35,7 +35,15 @@ public:
     // Resize the canvas (call after the window resizes).
     void resize(int w, int h);
 
+    // Transport controls
+    enum class Transport { Playing, Paused, Stopped };
+    Transport transport() const { return transportState; }
+    void play();
+    void pause();
+    void stop();  // pauses and resets all node state
+
     // Advance all node logic by dt seconds. Call once per frame before render().
+    // Does nothing when paused or stopped.
     void tick(float dt);
 
     // Optional overlay drawn on top of the node graph each frame (e.g. palette).
@@ -46,6 +54,9 @@ public:
     const uint32_t* pixels() const { return buf.data(); }
     int canvasW() const { return cw; }
     int canvasH() const { return ch; }
+
+    // Returns the most recently title-bar-clicked node (for Ctrl+D duplicate).
+    Node* selectedNode() const { return lastSelected; }
 
     // SDL-style mouse events.
     void onMouseDown (float x, float y, int btn);
@@ -65,11 +76,14 @@ private:
     std::vector<std::unique_ptr<Node>> nodes;
     WireLayer wireLayer;
 
+    Transport transportState = Transport::Playing;
+
     // Camera state
     Vec2  camPan  = {};
     float camZoom = 1.f;
 
     // Mouse capture state
+    Node*    lastSelected    = nullptr;
     Widget*  captured        = nullptr;
     bool     isWireDrag      = false;
     bool     isPanning       = false;
