@@ -1,6 +1,7 @@
 #pragma once
 #include "widget.h"
 #include "socket.h"
+#include <cstdint>
 #include <string>
 
 // A draggable container node with:
@@ -11,6 +12,7 @@
 class Node : public Widget {
 public:
     std::string title;
+    uint64_t    guid     = 0;      // stable identity; assigned at construction, persisted in saves
     bool        selected = false;
     Color4      accent   {0, 0, 0, 0};  // category colour stripe under the title; set by NodeRegistry
 
@@ -23,9 +25,8 @@ public:
     static constexpr float kMinWidth   = 180.f;
     static constexpr float kAccentH    =  3.f;   // category stripe height
 
-    explicit Node(std::string t, Vec2 pos = {})
-        : title(std::move(t))
-    { localPos = pos; width = kMinWidth; height = kTitleH + kPadY; }
+    explicit Node(std::string t, Vec2 pos = {});
+
 
     // Add an input socket and return a raw pointer for wiring.
     SocketWidget* addInput (std::string label, SocketType type = SocketType::CV);
@@ -69,5 +70,6 @@ private:
     int sockInputCount  = 0;
     int sockOutputCount = 0;
 
+    static uint64_t genGuid();
     void layoutSockets();
 };

@@ -1,5 +1,19 @@
 #include "node.h"
 #include "node_canvas.h"
+#include <random>
+
+uint64_t Node::genGuid() {
+    static std::mt19937_64 rng{std::random_device{}()};
+    return rng();
+}
+
+Node::Node(std::string t, Vec2 pos)
+    : title(std::move(t)), guid(genGuid())
+{
+    localPos = pos;
+    width    = kMinWidth;
+    height   = kTitleH + kPadY;
+}
 
 void Node::drawAll(tvg::Scene& scene) {
     if (!visible) return;

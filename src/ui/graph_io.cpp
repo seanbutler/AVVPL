@@ -3,18 +3,21 @@
 #include "socket.h"
 #include <nlohmann/json.hpp>
 #include <fstream>
+#include <cstdio>
+#include <unordered_map>
 
 using json = nlohmann::json;
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-static int nodeIndex(const NodeCanvas& nc, const Node* n) {
-    int i = 0;
-    for (auto& owned : nc.allNodes()) {
-        if (owned.get() == n) return i;
-        ++i;
-    }
-    return -1;
+static std::string guidToHex(uint64_t g) {
+    char buf[17];
+    std::snprintf(buf, sizeof(buf), "%016llx", (unsigned long long)g);
+    return buf;
+}
+
+static uint64_t hexToGuid(const std::string& s) {
+    return (uint64_t)std::stoull(s, nullptr, 16);
 }
 
 // Collect all sockets (children that are SocketWidget) in order.
@@ -46,6 +49,7 @@ bool graphSave(const NodeCanvas& nc, const std::string& path) {
         Node* n = owned.get();
         json jn;
         jn["type"] = n->title;
+        jn["guid"] = guidToHex(n->guid);
         jn["x"]    = n->localPos.x;
         jn["y"]    = n->localPos.y;
 
@@ -67,21 +71,19 @@ bool graphSave(const NodeCanvas& nc, const std::string& path) {
     }
     root["nodes"] = jnodes;
 
-    // Wires: (from_node_idx, from_sock_idx, to_node_idx, to_sock_idx)
+    // Wires: (from_node_guid, from_sock_idx, to_node_guid, to_sock_idx)
     json jwires = json::array();
     for (auto& w : nc.wires().wires) {
-        // Find which node owns each socket
-        int fn = -1, tn = -1, fi = -1, ti = -1;
-        int ni = 0;
+        std::string fg, tg;
+        int fi = -1, ti = -1;
         for (auto& owned : nc.allNodes()) {
             for (auto* s : nodeSockets(owned.get())) {
-                if (s == w.from) { fn = ni; fi = s->index; }
-                if (s == w.to)   { tn = ni; ti = s->index; }
+                if (s == w.from) { fg = guidToHex(owned->guid); fi = s->index; }
+                if (s == w.to)   { tg = guidToHex(owned->guid); ti = s->index; }
             }
-            ++ni;
         }
-        if (fn >= 0 && tn >= 0)
-            jwires.push_back({{"fn", fn}, {"fi", fi}, {"tn", tn}, {"ti", ti}});
+        if (!fg.empty() && !tg.empty())
+            jwires.push_back({{"fg", fg}, {"fi", fi}, {"tg", tg}, {"ti", ti}});
     }
     root["wires"] = jwires;
 
@@ -114,6 +116,11 @@ bool graphLoad(NodeCanvas& nc, const std::string& path) {
         auto owned = info->create(pos);
         Node* n    = owned.get();
 
+        // Restore GUID so wires can reference this node by its saved identity.
+        // Old saves without a "guid" field keep the freshly generated one.
+        if (jn.contains("guid"))
+            n->guid = hexToGuid(jn["guid"].get<std::string>());
+
         // Restore socket defaults
         if (jn.contains("sockets")) {
             auto socks = nodeSockets(n);
@@ -142,17 +149,36 @@ bool graphLoad(NodeCanvas& nc, const std::string& path) {
         nc.addNode(std::move(owned));
     }
 
-    // Re-create wires by matching node indices and socket indices
+    // Build GUID → Node* map for wire resolution.
     auto& nodes = nc.allNodes();
+    std::unordered_map<uint64_t, Node*> guidMap;
+    for (auto& owned : nodes) guidMap[owned->guid] = owned.get();
+
+    // Re-create wires. New format uses GUIDs ("fg"/"tg"); old format uses
+    // array indices ("fn"/"tn") and is still accepted for backward compat.
     for (auto& jw : root["wires"]) {
-        int fn = jw["fn"], fi = jw["fi"], tn = jw["tn"], ti = jw["ti"];
-        if (fn >= (int)nodes.size() || tn >= (int)nodes.size()) continue;
+        int fi = jw["fi"], ti = jw["ti"];
+        Node* fromNode = nullptr;
+        Node* toNode   = nullptr;
+
+        if (jw.contains("fg")) {
+            auto itF = guidMap.find(hexToGuid(jw["fg"].get<std::string>()));
+            auto itT = guidMap.find(hexToGuid(jw["tg"].get<std::string>()));
+            if (itF != guidMap.end()) fromNode = itF->second;
+            if (itT != guidMap.end()) toNode   = itT->second;
+        } else {
+            int fn = jw["fn"], tn = jw["tn"];
+            if (fn < (int)nodes.size()) fromNode = nodes[fn].get();
+            if (tn < (int)nodes.size()) toNode   = nodes[tn].get();
+        }
+
+        if (!fromNode || !toNode) continue;
 
         SocketWidget* from = nullptr;
         SocketWidget* to   = nullptr;
-        for (auto* s : nodeSockets(nodes[fn].get()))
+        for (auto* s : nodeSockets(fromNode))
             if (s->dir == SocketDir::Output && s->index == fi) { from = s; break; }
-        for (auto* s : nodeSockets(nodes[tn].get()))
+        for (auto* s : nodeSockets(toNode))
             if (s->dir == SocketDir::Input  && s->index == ti) { to   = s; break; }
 
         if (from && to) nc.wires().connect(from, to);
