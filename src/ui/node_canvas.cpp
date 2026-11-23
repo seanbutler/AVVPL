@@ -1,5 +1,6 @@
 #include "node_canvas.h"
 #include "tone_node.h"
+#include <SDL3/SDL.h>
 #include <algorithm>
 #include <cmath>
 
@@ -92,6 +93,37 @@ void NodeCanvas::clear() {
     captured       = nullptr;
     isWireDrag     = false;
     capturedIsDrag = false;
+    isRubberBand   = false;
+}
+
+void NodeCanvas::clearSelection() {
+    for (auto& n : nodes) n->selected = false;
+}
+
+void NodeCanvas::deleteSelected() {
+    for (auto& n : nodes)
+        if (n->selected)
+            for (auto& c : n->children)
+                if (auto* s = dynamic_cast<SocketWidget*>(c.get()))
+                    wireLayer.disconnectSocket(s);
+    nodes.erase(std::remove_if(nodes.begin(), nodes.end(),
+        [](const auto& n){ return n->selected; }), nodes.end());
+    if (auto* cn = dynamic_cast<Node*>(captured))
+        if (cn->selected) captured = nullptr;
+}
+
+void NodeCanvas::drawRubberBand(tvg::Scene& world) const {
+    if (!isRubberBand) return;
+    float x = std::min(rubberBandStart.x, rubberBandEnd.x);
+    float y = std::min(rubberBandStart.y, rubberBandEnd.y);
+    float w = std::abs(rubberBandEnd.x - rubberBandStart.x);
+    float h = std::abs(rubberBandEnd.y - rubberBandStart.y);
+    auto sh = tvg::Shape::gen();
+    sh->appendRect(x, y, w, h, 0.f, 0.f);
+    sh->fill(80, 140, 220, 35);
+    sh->stroke(1.5f);
+    sh->stroke(100, 160, 255, 180);
+    world.push(std::move(sh));
 }
 
 // Walk a widget tree collecting the first SocketWidget that contains pt.
@@ -155,6 +187,7 @@ void NodeCanvas::render() {
 
         wireLayer.draw(*world);
         for (auto& n : nodes) n->drawAll(*world);
+        drawRubberBand(*world);
 
         tvg::Matrix mat = {
             camZoom, 0.f,     camPan.x,
@@ -218,9 +251,14 @@ void NodeCanvas::onMouseDown(float x, float y, int btn) {
     }
 
     Widget* hit = hitTest(pt);
-    // Left-drag on empty canvas also pans — middle-click is unreliable on some
-    // setups (WSLg forwards input over RDP; many touchpads have no middle button).
-    if (!hit) { isPanning = true; panButton = btn; return; }
+
+    // Left-click on empty canvas: start rubber-band selection.
+    if (!hit) {
+        if (!(SDL_GetModState() & SDL_KMOD_SHIFT)) clearSelection();
+        isRubberBand     = true;
+        rubberBandStart  = rubberBandEnd = pt;
+        return;
+    }
 
     if (auto* s = dynamic_cast<SocketWidget*>(hit)) {
         wireLayer.beginDraft(s, pt);
@@ -228,11 +266,23 @@ void NodeCanvas::onMouseDown(float x, float y, int btn) {
         return;
     }
 
-    captured = hit;
+    captured       = hit;
     capturedIsDrag = false;
+
+    // Shift+click on a node title bar: toggle selection without starting a drag.
     if (auto* node = dynamic_cast<Node*>(hit)) {
+        if (SDL_GetModState() & SDL_KMOD_SHIFT) {
+            node->selected = !node->selected;
+            captured = nullptr;
+            return;
+        }
         capturedIsDrag = node->titleBarHit(pt);
         lastSelected   = node;
+        // Title-bar click without shift: clear others and select this node.
+        if (capturedIsDrag) {
+            if (!node->selected) clearSelection();
+            node->selected = true;
+        }
     }
 
     hit->onMouseDown(pt, btn);
@@ -246,6 +296,21 @@ void NodeCanvas::onMouseUp(float x, float y, int btn) {
     if (isWireDrag) {
         wireLayer.completeDraft(socketAt(pt));
         isWireDrag = false;
+        return;
+    }
+
+    if (isRubberBand) {
+        isRubberBand = false;
+        float x0 = std::min(rubberBandStart.x, rubberBandEnd.x);
+        float y0 = std::min(rubberBandStart.y, rubberBandEnd.y);
+        float x1 = std::max(rubberBandStart.x, rubberBandEnd.x);
+        float y1 = std::max(rubberBandStart.y, rubberBandEnd.y);
+        for (auto& n : nodes) {
+            Vec2 np = n->localPos;
+            if (np.x < x1 && np.x + n->width  > x0 &&
+                np.y < y1 && np.y + n->height > y0)
+                n->selected = true;
+        }
         return;
     }
 
@@ -272,10 +337,23 @@ void NodeCanvas::onMouseMove(float x, float y, float dx, float dy) {
         return;
     }
 
+    if (isRubberBand) {
+        rubberBandEnd = pt;
+        return;
+    }
+
     if (!captured) return;
 
     if (auto* node = dynamic_cast<Node*>(captured)) {
-        if (capturedIsDrag) node->onDrag(worldDelta);
+        if (capturedIsDrag) {
+            // Move all selected nodes together; fall back to just this node.
+            if (node->selected) {
+                for (auto& n : nodes)
+                    if (n->selected) n->onDrag(worldDelta);
+            } else {
+                node->onDrag(worldDelta);
+            }
+        }
         return;
     }
 

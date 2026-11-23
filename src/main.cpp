@@ -22,6 +22,7 @@
 #include "ui/quantise_node.h"
 #include "ui/poly_node.h"
 #include "ui/scope_node.h"
+#include "ui/mux_node.h"
 #include "ui/transport_bar.h"
 
 #include <SDL3/SDL_dialog.h>
@@ -40,8 +41,9 @@ static int H = 800;
 struct PendingFile {
     std::mutex  mtx;
     std::string path;
-    bool        ready  = false;
-    bool        isSave = false;
+    bool        ready    = false;
+    bool        isSave   = false;
+    bool        additive = false;
 };
 
 static void SDLCALL dialogCb(void* userdata, const char* const* filelist, int /*filter*/) {
@@ -71,10 +73,11 @@ static void openSaveDialog(SDL_Window* win, PendingFile& pf) {
     SDL_ShowSaveFileDialog(dialogCb, &pf, win, kJsonFilter, 2, def.c_str());
 }
 
-static void openLoadDialog(SDL_Window* win, PendingFile& pf) {
+static void openLoadDialog(SDL_Window* win, PendingFile& pf, bool additive = false) {
     std::lock_guard<std::mutex> lk(pf.mtx);
-    pf.ready  = false;
-    pf.isSave = false;
+    pf.ready    = false;
+    pf.isSave   = false;
+    pf.additive = additive;
     static std::string def = defaultGraphPath();
     SDL_ShowOpenFileDialog(dialogCb, &pf, win, kJsonFilter, 2, def.c_str(), false);
 }
@@ -114,6 +117,8 @@ static void registerNodes() {
             [](Vec2 pos){ return std::make_unique<StepRouterNode>(pos); });
 
     // Utility
+    reg.reg("Mux",        "Mux",        C::Utility,
+            [](Vec2 pos){ return std::make_unique<MuxNode>(pos); });
     reg.reg("Number",     "Number",     C::Utility,
             [](Vec2 pos){ return std::make_unique<NumberNode>(pos); });
     reg.reg("Scale",      "Scale",      C::Utility,
@@ -160,6 +165,9 @@ int main(int /*argc*/, char* /*argv*/[])
         return EXIT_FAILURE;
     }
 
+    // Query actual window size — the WM may have adjusted it after creation.
+    SDL_GetWindowSize(window, &W, &H);
+
     SDL_Texture* tex = SDL_CreateTexture(renderer,
                                          SDL_PIXELFORMAT_ARGB8888,
                                          SDL_TEXTUREACCESS_STREAMING, W, H);
@@ -183,7 +191,8 @@ int main(int /*argc*/, char* /*argv*/[])
 
     Palette palette(H - kTBarH, nc,
         [&]{ openSaveDialog(window, pendingFile); },
-        [&]{ openLoadDialog(window, pendingFile); });
+        [&]{ openLoadDialog(window, pendingFile, false); },
+        [&]{ openLoadDialog(window, pendingFile, true);  });
     nc.setOverlay([&palette](tvg::Scene& s){ palette.draw(s); });
 
     // Transport bar renders into its own 1-px-per-unit scene above the canvas.
@@ -225,10 +234,14 @@ int main(int /*argc*/, char* /*argv*/[])
 
                 case SDL_EVENT_KEY_DOWN:
                     if (ev.key.key == SDLK_ESCAPE) running = false;
+                    if (ev.key.key == SDLK_DELETE || ev.key.key == SDLK_BACKSPACE)
+                        nc.deleteSelected();
                     if (ev.key.key == SDLK_S && (ev.key.mod & SDL_KMOD_CTRL))
                         openSaveDialog(window, pendingFile);
-                    if (ev.key.key == SDLK_O && (ev.key.mod & SDL_KMOD_CTRL))
-                        openLoadDialog(window, pendingFile);
+                    if (ev.key.key == SDLK_O && (ev.key.mod & SDL_KMOD_CTRL)) {
+                        bool additive = (ev.key.mod & SDL_KMOD_SHIFT) != 0;
+                        openLoadDialog(window, pendingFile, additive);
+                    }
                     if (ev.key.key == SDLK_D && (ev.key.mod & SDL_KMOD_CTRL))
                         if (auto* sel = nc.selectedNode()) duplicateNode(nc, sel);
                     if (ev.key.key == SDLK_F11) {
@@ -271,8 +284,9 @@ int main(int /*argc*/, char* /*argv*/[])
         {
             std::lock_guard<std::mutex> lk(pendingFile.mtx);
             if (pendingFile.ready && !pendingFile.path.empty()) {
-                if (pendingFile.isSave) graphSave(nc, pendingFile.path);
-                else                    graphLoad(nc, pendingFile.path);
+                if (pendingFile.isSave)        graphSave(nc, pendingFile.path);
+                else if (pendingFile.additive) graphLoadAdditive(nc, pendingFile.path);
+                else                           graphLoad(nc, pendingFile.path);
 
                 // Show filename in window title bar
                 std::string fname = pendingFile.path;

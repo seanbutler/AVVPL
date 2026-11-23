@@ -3,11 +3,10 @@
 ## Application
 
 - [x] Save and Load should open a file dialog
-- [ ] Additive load — merge a saved graph on top of the current canvas (Ctrl+Shift+O)
-  - [ ] Assign each node a stable GUID (random uint64) at construction
-  - [ ] Serialise GUID per node; resolve wires by GUID instead of array index
-  - [ ] On additive load, incoming nodes keep their GUIDs; wires resolve correctly regardless of existing node count
-  - [ ] Migrate existing save format: on load, if nodes lack GUIDs assign them sequentially so old files still work
+- [ ] **GUID node IDs** — assign each node a stable random uint64 GUID at construction; serialise it; resolve wires by GUID instead of array index; on load, nodes without a GUID get one assigned so old saves still work
+- [ ] **Additive load** (depends on GUIDs) — merge a saved graph on top of the current canvas (Ctrl+Shift+O); incoming nodes keep their GUIDs; wires resolve correctly regardless of existing node count
+- [ ] **Group select** (depends on additive load) — rubber-band drag on empty canvas selects multiple nodes; Shift+click adds/removes from selection; selected nodes show a highlight border; Backspace deletes selection
+- [ ] **Group copy/paste** (depends on group select) — Ctrl+C copies selected subgraph (nodes + internal wires) to an in-memory clipboard; Ctrl+V pastes at cursor with new GUIDs; wires between pasted nodes rewired correctly
 - [ ] Node outline should pulse with Input Tick/CV etc
 - [ ] Some Kind of Help System
 
@@ -65,8 +64,11 @@
 - [ ] Slew limiter — smooths abrupt CV changes (portamento / glide)
 - [ ] Attenuverter — scales and/or inverts a CV signal
 - [ ] Mixer node — sums multiple audio or CV signals with per-input level
+- [ ] Mult node — 1 input, 4 outputs all carrying the same signal; keeps patches clean when distributing a clock, CV, or gate to multiple destinations
+- [x] Mux node — 4 CV inputs, Next trigger advances selection, CV output; equivalent to a Doepfer A-151 sequential switch; used for verse/chorus arrangement
 - [ ] Logic node — AND / OR / XOR on trigger signals
 - [ ] Comparator — fires trigger when input exceeds threshold
+- [ ] Clock Gate — passes or blocks a clock signal based on a gate/enable CV; enables full-sequence-then-full-sequence chaining between sequencers via their EOC outputs
 
 ## Effects
 

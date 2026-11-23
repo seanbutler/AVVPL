@@ -58,6 +58,9 @@ public:
     // Returns the most recently title-bar-clicked node (for Ctrl+D duplicate).
     Node* selectedNode() const { return lastSelected; }
 
+    // Delete all nodes that have selected == true (and their wires).
+    void deleteSelected();
+
     // SDL-style mouse events.
     void onMouseDown (float x, float y, int btn);
     void onMouseUp   (float x, float y, int btn);
@@ -90,6 +93,14 @@ private:
     int      panButton       = 0;      // mouse button that started the current pan
     bool     capturedIsDrag  = false;  // true when captured node was hit on its title bar
     Vec2     lastMouse       = {};
+
+    // Rubber-band selection
+    bool isRubberBand     = false;
+    Vec2 rubberBandStart  = {};
+    Vec2 rubberBandEnd    = {};
+
+    void clearSelection();
+    void drawRubberBand(tvg::Scene& world) const;
 
     std::function<void(tvg::Scene&)> overlayFn;
 

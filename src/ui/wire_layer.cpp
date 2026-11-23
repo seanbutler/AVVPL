@@ -113,8 +113,16 @@ void WireLayer::removeWire(int idx) {
 }
 
 void WireLayer::propagate() {
-    for (auto& w : wires)
+    for (auto& w : wires) {
+        w.activity *= 0.992f;  // decay ~400ms at 1ms tick rate
+
+        if (w.from->value.trig)
+            w.activity = 1.0f;
+        else if (std::abs(w.from->value.f - w.to->value.f) > 0.5f)
+            w.activity = std::max(w.activity, 0.35f);
+
         w.to->value = w.from->value;
+    }
 }
 
 void WireLayer::drawWire(tvg::Scene& scene, Vec2 a, Vec2 b, Color4 c, float sw) {
@@ -129,8 +137,18 @@ void WireLayer::drawWire(tvg::Scene& scene, Vec2 a, Vec2 b, Color4 c, float sw) 
 }
 
 void WireLayer::draw(tvg::Scene& scene) const {
-    for (auto& w : wires)
-        drawWire(scene, w.from->worldCenter(), w.to->worldCenter(), pal::WireColor, 2.f);
+    static constexpr Color4 kActive {0, 210, 255, 255};  // bright cyan — strong hue shift from amber idle
+    for (auto& w : wires) {
+        float a = w.activity;
+        Color4 c {
+            (uint8_t)(pal::WireColor.r + (kActive.r - pal::WireColor.r) * a),
+            (uint8_t)(pal::WireColor.g + (kActive.g - pal::WireColor.g) * a),
+            (uint8_t)(pal::WireColor.b + (kActive.b - pal::WireColor.b) * a),
+            (uint8_t)(pal::WireColor.a + (kActive.a - pal::WireColor.a) * a),
+        };
+        float sw = 2.f + a * 1.5f;  // slightly thicker when active
+        drawWire(scene, w.from->worldCenter(), w.to->worldCenter(), c, sw);
+    }
     if (hasDraft && draftFrom)
         drawWire(scene, draftFrom->worldCenter(), draftEnd, pal::WireDraft, 1.5f);
 }

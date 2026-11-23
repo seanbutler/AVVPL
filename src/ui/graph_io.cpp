@@ -95,20 +95,28 @@ bool graphSave(const NodeCanvas& nc, const std::string& path) {
 
 // ── load ──────────────────────────────────────────────────────────────────────
 
-bool graphLoad(NodeCanvas& nc, const std::string& path) {
-    std::ifstream f(path);
-    if (!f) return false;
-    json root;
-    try { root = json::parse(f); }
-    catch (...) { return false; }
-
-    nc.clear();
-
+// Shared implementation — merges JSON graph data into nc without clearing first.
+static bool loadGraphData(NodeCanvas& nc, const json& root) {
     auto& reg = NodeRegistry::get();
+
+    // When merging into a non-empty canvas, shift incoming nodes to the right
+    // of all existing content so they don't land on top.
+    float offsetX = 0.f;
+    if (!nc.allNodes().empty() && root.contains("nodes") && !root["nodes"].empty()) {
+        float existMaxX = -1e9f;
+        for (auto& owned : nc.allNodes()) {
+            float right = owned->localPos.x + owned->width;
+            if (right > existMaxX) existMaxX = right;
+        }
+        float incomingMinX = 1e9f;
+        for (auto& jn : root["nodes"])
+            incomingMinX = std::min(incomingMinX, jn.value("x", 0.f));
+        offsetX = existMaxX + 80.f - incomingMinX;
+    }
 
     for (auto& jn : root["nodes"]) {
         std::string type = jn["type"].get<std::string>();
-        Vec2 pos = {jn.value("x", 0.f), jn.value("y", 0.f)};
+        Vec2 pos = {jn.value("x", 0.f) + offsetX, jn.value("y", 0.f)};
 
         auto* info = reg.find(type);
         if (!info) continue;   // unknown type — skip
@@ -185,6 +193,23 @@ bool graphLoad(NodeCanvas& nc, const std::string& path) {
     }
 
     return true;
+}
+
+bool graphLoad(NodeCanvas& nc, const std::string& path) {
+    std::ifstream f(path);
+    if (!f) return false;
+    json root;
+    try { root = json::parse(f); } catch (...) { return false; }
+    nc.clear();
+    return loadGraphData(nc, root);
+}
+
+bool graphLoadAdditive(NodeCanvas& nc, const std::string& path) {
+    std::ifstream f(path);
+    if (!f) return false;
+    json root;
+    try { root = json::parse(f); } catch (...) { return false; }
+    return loadGraphData(nc, root);
 }
 
 // ── duplicate ─────────────────────────────────────────────────────────────────

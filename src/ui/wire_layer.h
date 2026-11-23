@@ -8,8 +8,9 @@ class SocketWidget;
 class Widget;
 
 struct Wire {
-    SocketWidget* from;  // output socket
-    SocketWidget* to;    // input socket
+    SocketWidget* from;      // output socket
+    SocketWidget* to;        // input socket
+    float         activity = 0.f;  // 0 = idle, 1 = fully active; decays each tick
 };
 
 class WireLayer {

@@ -22,7 +22,8 @@ public:
 
     Palette(int canvasH, NodeCanvas& nc,
             std::function<void()> onSave = {},
-            std::function<void()> onLoad = {});
+            std::function<void()> onLoad = {},
+            std::function<void()> onLoadAdditive = {});
 
     void draw(tvg::Scene& scene) const;
     void resize(int canvasH);                 // re-pins the footer to the window bottom

@@ -8,7 +8,8 @@
 
 Palette::Palette(int canvasH, NodeCanvas& canvas,
                  std::function<void()> onSave,
-                 std::function<void()> onLoad)
+                 std::function<void()> onLoad,
+                 std::function<void()> onLoadAdditive)
     : nc(canvas) {
     auto& reg = NodeRegistry::get();
 
@@ -37,9 +38,10 @@ Palette::Palette(int canvasH, NodeCanvas& canvas,
         buttons.push_back(std::move(btn));
     }
 
-    // Footer: Save / Load — actions provided by main so they can open a file dialog
-    buttons.push_back({"Save", {}, onSave ? onSave : [this]{ graphSave(nc, "graph.json"); }, Kind::Ghost});
-    buttons.push_back({"Load", {}, onLoad ? onLoad : [this]{ graphLoad(nc, "graph.json"); }, Kind::Ghost});
+    // Footer: Save / Load / Load+ — actions provided by main so they can open a file dialog
+    buttons.push_back({"Save",  {}, onSave         ? onSave         : [this]{ graphSave(nc, "graph.json"); },         Kind::Ghost});
+    buttons.push_back({"Load",  {}, onLoad         ? onLoad         : [this]{ graphLoad(nc, "graph.json"); },         Kind::Ghost});
+    buttons.push_back({"Load+", {}, onLoadAdditive ? onLoadAdditive : [this]{ graphLoadAdditive(nc, "graph.json"); }, Kind::Ghost});
 
     resize(canvasH);
 }
@@ -62,12 +64,14 @@ void Palette::layout() {
 
     // Footer row pinned to the bottom, but never above the end of the list
     footerY = std::max(y + kPadY, panelH - kPadY - kBtnH);
-    const float halfW = (fullW - kBtnGap) * 0.5f;
+    int nGhost = 0;
+    for (auto& b : buttons) if (b.kind == Kind::Ghost) ++nGhost;
+    float btnW = nGhost > 0 ? (fullW - kBtnGap * (nGhost - 1)) / nGhost : fullW;
     float x = kPadX;
     for (auto& b : buttons) {
         if (b.kind != Kind::Ghost) continue;
-        b.x = x; b.y = footerY; b.w = halfW;
-        x += halfW + kBtnGap;
+        b.x = x; b.y = footerY; b.w = btnW;
+        x += btnW + kBtnGap;
     }
 }
 
