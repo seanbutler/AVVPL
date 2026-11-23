@@ -29,12 +29,16 @@ Dependencies are fetched automatically: SDL3, ThorVG (built via Meson), nlohmann
 | Right-click on node | Delete node |
 | Right-click on socket | Disconnect socket |
 | Right-click near wire | Delete wire |
-| Left-click drag on empty canvas | Pan canvas |
+| Left-click drag on empty canvas | Rubber-band select nodes |
+| Shift + left-click title bar | Add / remove node from selection |
 | Middle-click drag | Pan canvas |
 | Scroll wheel | Zoom canvas (0.35× – 3×) |
 | Shift + drag slider | Snap slider to discrete steps scaled to its range |
-| Ctrl+S | Save graph to `graph.json` |
-| Ctrl+O | Load graph from `graph.json` |
+| Backspace / Delete | Delete selected node(s) |
+| Ctrl+D | Duplicate selected node (no wires) |
+| Ctrl+S | Save graph |
+| Ctrl+O | Load graph (replaces current) |
+| Ctrl+Shift+O | Load graph additively (merges alongside current) |
 | F11 | Toggle fullscreen |
 | Escape | Quit |
 
@@ -45,6 +49,7 @@ Dependencies are fetched automatically: SDL3, ThorVG (built via Meson), nlohmann
 | Node | Description |
 |---|---|
 | **Tone** | Synthesises audio from Freq, Waveform, Amp, and Detune inputs via SDL audio |
+| **LFO** | Low-frequency oscillator (0.01–20 Hz); Rate and Depth dials, Sine/Sqr/Saw/Tri waveforms; 0–1 Out CV and a Trig per cycle |
 | **Waveform** | Discrete waveform type selector (Sine / Square / Saw / Triangle / Noise) |
 | **Scope** | Oscilloscope of the graph's audio output: the summed signal of every Tone node, red when clipping. Time slider sets the span (1–90 ms) |
 | **Envelope** | ADSR envelope — outputs a 0–1 CV curve on each Gate trigger |
@@ -75,6 +80,7 @@ Dependencies are fetched automatically: SDL3, ThorVG (built via Meson), nlohmann
 | **Scale** | Maps an input float from one range to another (clamps to input range) |
 | **Quantise** | Snaps an input frequency (Hz) to the nearest note of a chosen scale and root; Trig fires on each note change |
 | **Button** | Clickable pad; Trig fires on press, Rel on release. Wire Trig into Reset inputs to restart a tune |
+| **Mux** | 4-slot sequential switch (Doepfer A-151 style); each slot has a Next trigger and a CV input; the active slot's CV is forwarded to the output and advances on its Next trigger — wire sequencer EOC outputs to chain verse/chorus patterns |
 | **Polygon** | Displays a regular polygon driven by Sides, Radius, and Rotation CV inputs |
 
 ## Example patch — sequenced melody
@@ -124,6 +130,7 @@ src/
     scope_node.h          — ScopeNode oscilloscope display
     button_node.h         — ButtonNode manual trigger pad
     quantise_node.h       — QuantiseNode Hz → nearest scale note
+    mux_node.h            — MuxNode 4-slot sequential switch
 ```
 
 **Tick order each frame:** clear output triggers → tick all nodes → propagate wires.  

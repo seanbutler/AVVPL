@@ -259,21 +259,22 @@ Graphs are saved as JSON with the structure:
   "nodes": [
     {
       "type": "Tone",
+      "guid": "a1b2c3d4e5f60718",
       "x": 100.0, "y": 200.0,
       "sockets": [{"dir": "in", "idx": 0, "val": 440.0}, ...],
       "widgets": [0.5]
     }
   ],
   "wires": [
-    {"fn": 0, "fi": 0, "tn": 1, "ti": 0}
+    {"fg": "a1b2c3d4e5f60718", "fi": 0, "tg": "b2c3d4e5f6071829", "ti": 0}
   ]
 }
 ```
 
 **Known weaknesses:**
 - `type` is the node's display title — renaming breaks existing saves
-- Wires reference nodes by array index — additive load requires index offsetting
-  (planned: migrate to GUIDs, see TODO.md)
+- ~~Wires reference nodes by array index~~ — **resolved**: wires now use 64-bit GUIDs;
+  old saves without GUIDs fall back to index resolution automatically
 - `connected` flag on input sockets is not serialised — wired sockets start
   disconnected until the wire is re-created on load
 - No format version field — schema changes silently corrupt old saves

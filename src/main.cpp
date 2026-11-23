@@ -23,6 +23,7 @@
 #include "ui/poly_node.h"
 #include "ui/scope_node.h"
 #include "ui/mux_node.h"
+#include "ui/lfo_node.h"
 #include "ui/transport_bar.h"
 
 #include <SDL3/SDL_dialog.h>
@@ -95,6 +96,10 @@ static void registerNodes() {
             [](Vec2 pos){ return std::make_unique<EnvelopeNode>(pos); });
     reg.reg("Waveform",   "Waveform",   C::Sound,
             [](Vec2 pos){ return std::make_unique<WaveformNode>(pos); });
+
+    // Sound
+    reg.reg("LFO",        "LFO",        C::Sound,
+            [](Vec2 pos){ return std::make_unique<LfoNode>(pos); });
 
     // Timing
     reg.reg("Tempo",      "Tempo",      C::Timing,

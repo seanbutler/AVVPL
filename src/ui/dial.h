@@ -18,11 +18,17 @@ public:
     static constexpr float kKnobR    = 12.f;
     static constexpr float kArcW     =  4.f;
 
+    bool logScale = false;  // when true, arc position is proportional to log(value)
+
     DialWidget(std::string lbl, float mn, float mx, float v)
         : min(mn), max(mx), value(clampf(v, mn, mx)), label(std::move(lbl))
     { width = height = kSize; }
 
-    float norm() const { return (value - min) / (max - min); }
+    float norm() const {
+        if (logScale && min > 0.f && max > 0.f)
+            return std::log(value / min) / std::log(max / min);
+        return (value - min) / (max - min);
+    }
 
     Vec2 center() const {
         Vec2 wp = worldPos();
@@ -51,7 +57,11 @@ private:
     float dragY = -1.f;
 
     void setNorm(float t) {
-        float v = min + clamp01(t) * (max - min);
+        float v;
+        if (logScale && min > 0.f && max > 0.f)
+            v = min * std::pow(max / min, clamp01(t));
+        else
+            v = min + clamp01(t) * (max - min);
         if (v != value) { value = v; if (onChange) onChange(v); }
     }
 };

@@ -40,6 +40,7 @@ public:
         auto* dD = place("Dec", 0.01f,  8.f,  0.5f,  x2, y1);
         auto* sD = place("Sus", 0.f,    1.f,  0.f,   x1, y2);
         auto* rD = place("Rel", 0.01f,  8.f,  0.3f,  x2, y2);
+        aD->logScale = dD->logScale = rD->logScale = true;
 
         height = y2 + DialWidget::kSize + kPadY;
 

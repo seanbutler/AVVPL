@@ -3,9 +3,9 @@
 ## Application
 
 - [x] Save and Load should open a file dialog
-- [ ] **GUID node IDs** — assign each node a stable random uint64 GUID at construction; serialise it; resolve wires by GUID instead of array index; on load, nodes without a GUID get one assigned so old saves still work
-- [ ] **Additive load** (depends on GUIDs) — merge a saved graph on top of the current canvas (Ctrl+Shift+O); incoming nodes keep their GUIDs; wires resolve correctly regardless of existing node count
-- [ ] **Group select** (depends on additive load) — rubber-band drag on empty canvas selects multiple nodes; Shift+click adds/removes from selection; selected nodes show a highlight border; Backspace deletes selection
+- [x] **GUID node IDs** — assign each node a stable random uint64 GUID at construction; serialise it; resolve wires by GUID instead of array index; on load, nodes without a GUID get one assigned so old saves still work
+- [x] **Additive load** (depends on GUIDs) — merge a saved graph on top of the current canvas (Ctrl+Shift+O); incoming nodes keep their GUIDs; wires resolve correctly regardless of existing node count; loaded graph offset to the right of existing content
+- [x] **Group select** (depends on additive load) — rubber-band drag on empty canvas selects multiple nodes; Shift+click adds/removes from selection; selected nodes show a highlight border; Backspace deletes selection
 - [ ] **Group copy/paste** (depends on group select) — Ctrl+C copies selected subgraph (nodes + internal wires) to an in-memory clipboard; Ctrl+V pastes at cursor with new GUIDs; wires between pasted nodes rewired correctly
 - [ ] Node outline should pulse with Input Tick/CV etc
 - [ ] Some Kind of Help System
@@ -23,7 +23,7 @@
 
 - [ ] Socket type system — Trigger / Float / Audio with colour coding and connection validation
 - [x] Canvas pan and zoom — middle mouse button
-- [ ] Select multiple nodes (rubber-band drag) and move/delete as a group
+- [x] Select multiple nodes (rubber-band drag) and move/delete as a group
 - [x] Duplicate node (Ctrl+D) — copies all widget values, no wires
 - [ ] Undo/redo
 
@@ -50,7 +50,7 @@
 ## Oscillators / Sound sources
 
 - [x] Tone node — VCO with Freq, Waveform, Amp, and Detune inputs
-- [ ] LFO node — low-frequency oscillator for slow modulation (rate, depth, waveform)
+- [x] LFO node — low-frequency oscillator for slow modulation (rate, depth, waveform)
 - [ ] Wavetable oscillator — cycles through stored waveforms
 
 ## Filters
@@ -125,6 +125,10 @@ Problem: every palette button has its own unrelated hue, the order is arbitrary,
 - [x] Zoom clamped to 0.35×–3× to prevent extreme SW rasterisation cost at low zoom
 - [x] Remove stale `buildScene` function from main.cpp
 - [x] Sequencer zero-value steps no longer fire a trigger (eliminates click artifacts)
+- [x] Play/Pause/Stop transport bar across the top of the window
+- [x] Pause and Stop correctly silence audio (ToneNode global mute flag)
+- [x] Accumulator resets on pause/stop so time does not burst when play resumes
+- [x] Wire activity flash — wires light up cyan on trigger and fade over ~400ms
 - [ ] Socket `connected` flag should survive save/load (currently not serialised)
 - [ ] Graceful handling of unknown node types on load (currently silently skipped)
 - [ ] Switch ThorVG canvas from SW to GL backend — rendering currently CPU-only; all rasterisation happens in software and is uploaded as a texture each frame
